@@ -131,3 +131,7 @@ Thumbs.db
 FINANCE-*.md
 FINANCE-PLAN.pdf
 *-sample.pdf
+
+# Local runtime data & generated outputs
+data/*.db
+output/
