@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Personal Finance Advisor — 14-Skill Unified Hub</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <div>
+        <h1>AI Personal Finance Advisor</h1>
+        <p class="subtitle">14-Skill Financial Planning Hub, SQLite Persistence &amp; PDF Engine</p>
+      </div>
+    </div>
+    <div id="userControls" class="user-controls hidden">
+      <span id="userBadge" class="badge"></span>
+      <a class="btn ghost sm" href="/api/docs" target="_blank">API Docs</a>
+      <button id="logoutBtn" class="btn secondary sm" type="button">Log Out</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Auth View: Sign In + Register -->
+    <section id="loginView" class="login-wrapper">
+      <div class="card login-card">
+        <div class="tabs auth-tabs">
+          <button id="tabSignIn" class="tab active" type="button">Sign In</button>
+          <button id="tabRegister" class="tab" type="button">Register Account</button>
+        </div>
+
+        <form id="loginForm">
+          <p class="muted">Default local account: <code>user</code> / <code>password</code></p>
+          <label>
+            Username
+            <input id="usernameInput" type="text" value="user" required autocomplete="username" />
+          </label>
+          <label>
+            Password
+            <input id="passwordInput" type="password" value="password" required autocomplete="current-password" />
+          </label>
+          <div id="loginError" class="error-msg hidden"></div>
+          <button class="btn primary full" type="submit">Sign In</button>
+        </form>
+
+        <form id="registerForm" class="hidden">
+          <p class="muted">Create a new local account stored in SQLite (with its own starter plan).</p>
+          <label>
+            New Username (3-32 chars)
+            <input id="regUsernameInput" type="text" required minlength="3" maxlength="32" autocomplete="username" />
+          </label>
+          <label>
+            New Password (4+ chars)
+            <input id="regPasswordInput" type="password" required minlength="4" autocomplete="new-password" />
+          </label>
+          <div id="registerError" class="error-msg hidden"></div>
+          <button class="btn blue full" type="submit">Create Account &amp; Sign In</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Authenticated Unified 14-Skill App View -->
+    <section id="appView" class="app-layout hidden">
+      <aside class="sidebar">
+        <div class="card sidebar-card">
+          <div class="sidebar-header">
+            <h2>Active Plan</h2>
+            <button id="newPlanBtn" class="btn primary sm" type="button">+ New</button>
+          </div>
+          <select id="planSelect" class="plan-select" aria-label="Select Financial Plan"></select>
+          <div class="plan-mini-actions">
+            <button id="overviewNavBtn" class="btn ghost sm full" type="button">Plan Overview</button>
+            <button id="deletePlanBtn" class="btn ghost-danger sm" type="button" title="Delete active plan">Delete Plan</button>
+          </div>
+        </div>
+
+        <div class="card sidebar-card">
+          <div class="sidebar-header">
+            <h2>5-Stage Skills Hub</h2>
+            <span id="completionPill" class="pill sm">0/14</span>
+          </div>
+          <nav id="stageNav" class="stage-nav"></nav>
+        </div>
+      </aside>
+
+      <div class="content">
+        <!-- Plan Header Banner -->
+        <div class="card score-banner">
+          <div class="score-main">
+            <div id="gaugeContainer"></div>
+            <div>
+              <div class="kicker">FINANCIAL HEALTH SCORE</div>
+              <h2 id="planTitleHeading">Personal Financial Plan</h2>
+              <div class="grade-row">
+                <span id="gradeBadge" class="pill">--</span>
+                <span id="signalText" class="muted"></span>
+              </div>
+            </div>
+          </div>
+          <div class="score-actions">
+            <button id="previewPdfBtn" class="btn ghost" type="button">Preview PDF</button>
+            <button id="downloadPdfBtn" class="btn blue" type="button">Download PDF</button>
+          </div>
+        </div>
+
+        <div id="statusBanner" class="status-banner hidden"></div>
+
+        <!-- View A: Overview & Summary -->
+        <div id="overviewPanel">
+          <div class="card">
+            <h3>5-Pillar Category Breakdown</h3>
+            <div id="categoryBars" class="bars"></div>
+          </div>
+          <div class="card" style="margin-top:16px;">
+            <h3>Executive Summary &amp; Top Priorities</h3>
+            <p id="overviewSummary" class="result-summary" style="margin-top:10px;"></p>
+            <div id="overviewMetrics" class="metrics-grid"></div>
+            <div id="overviewActions"></div>
+          </div>
+          <details class="card advanced-details" style="margin-top:16px;">
+            <summary>Advanced: Edit Raw Plan JSON</summary>
+            <div class="section-head" style="margin-top:12px;">
+              <span class="muted">Direct JSON payload stored in SQLite and passed to ReportLab.</span>
+              <button id="saveJsonBtn" class="btn primary sm" type="button">Save JSON to DB</button>
+            </div>
+            <textarea id="jsonEditor" class="code-editor" spellcheck="false"></textarea>
+          </details>
+        </div>
+
+        <!-- View B: Active Skill Workspace -->
+        <div id="skillPanel" class="hidden">
+          <div class="card">
+            <div class="section-head">
+              <div>
+                <div id="skillStageKicker" class="kicker"></div>
+                <h2 id="skillHeading" style="margin:2px 0 4px;"></h2>
+                <p id="skillDesc" class="muted" style="margin:0;"></p>
+              </div>
+              <span id="skillStatusBadge" class="pill neutral">Ready</span>
+            </div>
+
+            <div id="skillFormContainer" style="margin-top:16px;"></div>
+
+            <div class="skill-actions">
+              <button id="runSkillBtn" class="btn primary" type="button">Run Calculator</button>
+              <button id="runAndSyncBtn" class="btn blue" type="button">Run &amp; Sync to Plan</button>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:16px;">
+            <h3>Analysis Output</h3>
+            <div id="skillResultContainer"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="disclaimer">
+    <strong>Disclaimer:</strong> For educational and informational purposes only. This is NOT financial, investment, tax, or legal advice.
+  </footer>
+
+  <script src="/charts.js"></script>
+  <script src="/skills.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
