@@ -72,7 +72,7 @@ If the user provides incomplete data, use reasonable defaults but flag them in t
 
 ### Phase 2 — Launch 5 Parallel Subagents
 
-Launch all 5 agents in a single message with parallel Task tool calls.
+Launch all 5 agents in a single message with parallel `invoke_subagent` calls.
 
 #### Agent 1: finance-cashflow
 

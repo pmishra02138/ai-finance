@@ -19,7 +19,7 @@ Deliver a high-signal financial health scorecard in under 60 seconds without lau
 
 ## DO NOT Launch Subagents
 
-This skill must complete in a single response after collecting inputs. No parallel agents. No external API calls. All math is done inline by Claude.
+This skill must complete in a single response after collecting inputs. No parallel agents. No external API calls. All math is done inline by the agent.
 
 ## Required Inputs
 

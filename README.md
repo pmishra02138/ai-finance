@@ -1,8 +1,8 @@
 ![AI Personal Finance Advisor](.github/banner.svg)
 
-# AI Personal Finance Advisor for Claude Code
+# AI Personal Finance Advisor for Antigravity (AGY)
 
-> **AI-Powered Financial Planning & Analysis Engine — 14 skills, 5 parallel agents, professional PDF reports.**
+> **AI-Powered Financial Planning & Analysis Engine — 15 skills (1 orchestrator + 14 sub-skills), 5 parallel subagents, professional PDF reports, and macOS localhost Docker support.**
 
 > ⚠️ **This is NOT financial advice.** This tool is for informational and educational purposes only. Consult a licensed financial advisor, CPA, or attorney before making any financial decisions.
 
@@ -44,18 +44,25 @@ It does not replace a fiduciary advisor for execution, but it gives you the **di
 
 ## 📦 Installation
 
-**One-command install (recommended):**
+**Localhost Docker install on macOS (recommended for isolated PDF generation):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zubair-trabzada/ai-finance-claude/main/install.sh | bash
+git clone https://github.com/zubair-trabzada/ai-finance.git
+cd ai-finance
+./install.sh --docker
+# Server runs on http://localhost:8787
 ```
 
-**Local install:**
+**Local AGY skill install:**
 
 ```bash
-git clone https://github.com/zubair-trabzada/ai-finance-claude.git
-cd ai-finance-claude
-./install.sh
+./install.sh --local
+```
+
+**One-command remote install:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/zubair-trabzada/ai-finance/main/install.sh | bash
 ```
 
 **Uninstall:**
@@ -65,11 +72,11 @@ cd ai-finance-claude
 ```
 
 The installer:
-- Checks Python 3.8+ and auto-installs `reportlab>=4.0.0`
-- Copies the orchestrator to `~/.claude/skills/finance/`
-- Copies the 13 sub-skills to `~/.claude/skills/finance-*/`
-- Copies agents to `~/.claude/agents/`
-- Copies the PDF generator to `~/.claude/skills/finance/scripts/`
+- Checks Python 3.8+ and installs `reportlab>=4.0.0` (or starts the `localhost:8787` Docker container with `--docker`)
+- Copies the orchestrator to `~/.gemini/antigravity/skills/finance/` (or `~/.claude/skills/finance/` with `--claude`)
+- Copies the 14 sub-skills to `~/.gemini/antigravity/skills/finance-*/`
+- Copies the PDF generator and localhost server to `~/.gemini/antigravity/skills/finance/scripts/`
+- Workspace skills are also pre-wired under `.agents/skills/` for direct AGY discovery
 
 ---
 
@@ -175,7 +182,7 @@ python3 ~/.claude/skills/finance/scripts/generate_finance_pdf.py --demo
 ## 🏗️ Project Structure
 
 ```
-ai-finance-claude/
+ai-finance/
 ├── README.md
 ├── LICENSE
 ├── install.sh

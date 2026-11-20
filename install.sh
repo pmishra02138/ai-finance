@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # AI Personal Finance Advisor - Installer
-# Repo: zubair-trabzada/ai-finance-claude
+# Repo: zubair-trabzada/ai-finance
 #
-# Local install:  ./install.sh
-# Remote install: curl -fsSL https://raw.githubusercontent.com/zubair-trabzada/ai-finance-claude/main/install.sh | bash
+# Local AGY install (default): ./install.sh
+# Docker localhost install (Mac): ./install.sh --docker
+# Legacy Claude target:           ./install.sh --claude
 
 set -e
 
-# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -17,14 +17,61 @@ MAGENTA='\033[0;35m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-REPO="zubair-trabzada/ai-finance-claude"
+REPO="zubair-trabzada/ai-finance"
 BRANCH="main"
-RAW_BASE="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
 TARBALL_URL="https://github.com/${REPO}/archive/refs/heads/${BRANCH}.tar.gz"
 
-CLAUDE_DIR="${HOME}/.claude"
-SKILLS_DIR="${CLAUDE_DIR}/skills"
-AGENTS_DIR="${CLAUDE_DIR}/agents"
+TARGET_MODE="agy"     # agy | claude
+INSTALL_MODE="local"  # local | docker
+TMP_DIR=""
+
+cleanup() {
+  if [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ]; then
+    rm -rf "$TMP_DIR"
+  fi
+}
+trap cleanup EXIT
+
+for arg in "$@"; do
+  case "$arg" in
+    --docker)
+      INSTALL_MODE="docker"
+      ;;
+    --local)
+      INSTALL_MODE="local"
+      ;;
+    --claude)
+      TARGET_MODE="claude"
+      ;;
+    --agy)
+      TARGET_MODE="agy"
+      ;;
+    -h|--help)
+      echo "Usage: ./install.sh [--local | --docker] [--agy | --claude]"
+      echo "  --local   Install skills & scripts locally (default)"
+      echo "  --docker  Build and start the localhost:8787 Docker container (Mac/Linux)"
+      echo "  --agy     Install into ~/.gemini/antigravity/skills/ (default)"
+      echo "  --claude  Install into ~/.claude/skills/"
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $arg" >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [ "$TARGET_MODE" = "claude" ]; then
+  BASE_DIR="${HOME}/.claude"
+  SKILLS_DIR="${BASE_DIR}/skills"
+  AGENTS_DIR="${BASE_DIR}/agents"
+  TARGET_LABEL="Claude Code (~/.claude/skills/)"
+else
+  BASE_DIR="${HOME}/.gemini/antigravity"
+  SKILLS_DIR="${BASE_DIR}/skills"
+  AGENTS_DIR=""
+  TARGET_LABEL="Antigravity (~/.gemini/antigravity/skills/)"
+fi
 
 # Detect local vs remote install
 SCRIPT_PATH="${BASH_SOURCE[0]:-}"
@@ -43,27 +90,16 @@ print_banner() {
   echo -e "${BOLD}${YELLOW}╔══════════════════════════════════════════════════════════╗${NC}"
   echo -e "${BOLD}${YELLOW}║                                                          ║${NC}"
   echo -e "${BOLD}${YELLOW}║       AI PERSONAL FINANCE ADVISOR — Installer            ║${NC}"
-  echo -e "${BOLD}${YELLOW}║       AI-Powered Financial Planning for Claude Code      ║${NC}"
+  echo -e "${BOLD}${YELLOW}║       Antigravity (AGY) & Localhost Docker Edition       ║${NC}"
   echo -e "${BOLD}${YELLOW}║                                                          ║${NC}"
   echo -e "${BOLD}${YELLOW}╚══════════════════════════════════════════════════════════╝${NC}"
   echo ""
 }
 
-err() {
-  echo -e "${RED}✗ $1${NC}" >&2
-}
-
-ok() {
-  echo -e "${GREEN}✓${NC} $1"
-}
-
-info() {
-  echo -e "${BLUE}ℹ${NC} $1"
-}
-
-warn() {
-  echo -e "${YELLOW}⚠${NC} $1"
-}
+err() { echo -e "${RED}✗ $1${NC}" >&2; }
+ok() { echo -e "${GREEN}✓${NC} $1"; }
+info() { echo -e "${BLUE}ℹ${NC} $1"; }
+warn() { echo -e "${YELLOW}⚠${NC} $1"; }
 
 check_python() {
   if ! command -v python3 >/dev/null 2>&1; then
@@ -71,9 +107,8 @@ check_python() {
     return 1
   fi
 
-  local pyver
+  local pyver major minor
   pyver=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-  local major minor
   major=$(echo "$pyver" | cut -d. -f1)
   minor=$(echo "$pyver" | cut -d. -f2)
 
@@ -87,6 +122,14 @@ check_python() {
 }
 
 check_reportlab() {
+  if command -v uv >/dev/null 2>&1 && [ -f "${SOURCE_DIR}/pyproject.toml" ]; then
+    info "uv detected — syncing dependencies via uv..."
+    if (cd "$SOURCE_DIR" && uv sync --no-install-project --no-dev >/dev/null 2>&1); then
+      ok "Dependencies synced with uv (.venv)"
+      return 0
+    fi
+  fi
+
   if python3 -c "import reportlab" >/dev/null 2>&1; then
     local rlver
     rlver=$(python3 -c "import reportlab; print(reportlab.Version)")
@@ -101,25 +144,24 @@ check_reportlab() {
     return 0
   fi
 
-  warn "Could not auto-install ReportLab. Install manually with:"
-  echo "    pip3 install 'reportlab>=4.0.0'"
+  warn "Could not auto-install dependencies (e.g., PEP 668 externally managed Python)."
+  echo "    Recommended: uv sync   (or run with Docker: ./install.sh --docker)"
+  echo "    Or manually: pip3 install -r requirements.txt"
   return 0
 }
 
 fetch_remote() {
   info "Downloading repo tarball..."
-  local tmp
-  tmp=$(mktemp -d)
+  TMP_DIR=$(mktemp -d)
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "$TARBALL_URL" | tar -xz -C "$tmp"
+    curl -fsSL "$TARBALL_URL" | tar -xz -C "$TMP_DIR"
   elif command -v wget >/dev/null 2>&1; then
-    wget -qO- "$TARBALL_URL" | tar -xz -C "$tmp"
+    wget -qO- "$TARBALL_URL" | tar -xz -C "$TMP_DIR"
   else
     err "Neither curl nor wget found."
     exit 1
   fi
-  # archive name: ai-finance-claude-main
-  SOURCE_DIR="${tmp}/ai-finance-claude-${BRANCH}"
+  SOURCE_DIR="${TMP_DIR}/ai-finance-${BRANCH}"
   if [ ! -d "$SOURCE_DIR" ]; then
     err "Tarball extraction failed: ${SOURCE_DIR} not found."
     exit 1
@@ -135,7 +177,7 @@ install_orchestrator() {
   fi
   mkdir -p "${SKILLS_DIR}/finance"
   cp -R "${src}/." "${SKILLS_DIR}/finance/"
-  ok "Installed orchestrator → ~/.claude/skills/finance/"
+  ok "Installed orchestrator → ${SKILLS_DIR}/finance/"
 }
 
 install_skills() {
@@ -153,15 +195,13 @@ install_skills() {
     cp -R "${dir}." "${SKILLS_DIR}/${name}/"
     count=$((count + 1))
   done
-  ok "Installed ${count} sub-skills → ~/.claude/skills/finance-*/"
+  ok "Installed ${count} sub-skills → ${SKILLS_DIR}/finance-*/"
 }
 
 install_agents() {
+  [ -n "$AGENTS_DIR" ] || return 0
   local src="${SOURCE_DIR}/agents"
-  if [ ! -d "$src" ]; then
-    warn "No agents/ folder at ${src}, skipping."
-    return
-  fi
+  [ -d "$src" ] || return 0
   mkdir -p "${AGENTS_DIR}"
   local count=0
   for file in "$src"/*.md; do
@@ -170,9 +210,7 @@ install_agents() {
     count=$((count + 1))
   done
   if [ "$count" -gt 0 ]; then
-    ok "Installed ${count} agents → ~/.claude/agents/"
-  else
-    info "No agents to install."
+    ok "Installed ${count} agents → ${AGENTS_DIR}/"
   fi
 }
 
@@ -185,42 +223,46 @@ install_scripts() {
   mkdir -p "${SKILLS_DIR}/finance/scripts"
   cp -R "${src}/." "${SKILLS_DIR}/finance/scripts/"
   chmod +x "${SKILLS_DIR}/finance/scripts/"*.py 2>/dev/null || true
-  ok "Installed scripts → ~/.claude/skills/finance/scripts/"
+  ok "Installed scripts → ${SKILLS_DIR}/finance/scripts/"
+}
+
+install_docker_localhost() {
+  info "Setting up Docker localhost service (macOS/Linux)..."
+  if ! command -v docker >/dev/null 2>&1; then
+    err "Docker CLI not found. On macOS, install Docker Desktop: https://www.docker.com/products/docker-desktop/"
+    exit 1
+  fi
+  if ! docker info >/dev/null 2>&1; then
+    err "Docker daemon is not running. Start Docker Desktop on macOS and retry."
+    exit 1
+  fi
+  mkdir -p "${SOURCE_DIR}/output" "${SOURCE_DIR}/data"
+  (
+    cd "$SOURCE_DIR"
+    docker compose up -d --build
+  )
+  ok "Docker stack running: Web UI at http://localhost:3000 (API at http://localhost:8787)"
+  echo ""
+  echo -e "${BOLD}${CYAN}Localhost endpoints:${NC}"
+  echo -e "  ${GREEN}•${NC} Web UI:   http://localhost:3000  (default login: user / password)"
+  echo -e "  ${GREEN}•${NC} API Docs: http://localhost:8787/docs"
+  echo -e "  ${GREEN}•${NC} Health:   curl http://localhost:8787/health"
+  echo ""
 }
 
 print_summary() {
-  local skill_count agent_count
+  local skill_count
   skill_count=$(find "${SKILLS_DIR}" -maxdepth 1 -type d -name "finance*" 2>/dev/null | wc -l | tr -d ' ')
-  agent_count=$(find "${AGENTS_DIR}" -maxdepth 1 -type f -name "finance-*.md" 2>/dev/null | wc -l | tr -d ' ')
 
   echo ""
   echo -e "${BOLD}${GREEN}╔══════════════════════════════════════════════════════════╗${NC}"
   echo -e "${BOLD}${GREEN}║              INSTALLATION COMPLETE                       ║${NC}"
   echo -e "${BOLD}${GREEN}╚══════════════════════════════════════════════════════════╝${NC}"
   echo ""
-  echo -e "${BOLD}Installed:${NC}"
-  echo -e "  ${GREEN}•${NC} ${skill_count} skill folder(s) under ~/.claude/skills/"
-  echo -e "  ${GREEN}•${NC} ${agent_count} agent file(s) under ~/.claude/agents/"
+  echo -e "${BOLD}Installed (${TARGET_LABEL}):${NC}"
+  echo -e "  ${GREEN}•${NC} ${skill_count} skill folder(s) under ${SKILLS_DIR}/"
   echo ""
-  echo -e "${BOLD}${CYAN}Command Reference:${NC}"
-  echo -e "  ${MAGENTA}/finance${NC}             — Main orchestrator (full plan + PDF)"
-  echo -e "  ${MAGENTA}/finance-quick${NC}       — 60-second financial snapshot"
-  echo -e "  ${MAGENTA}/finance-analyze${NC}     — Full multi-agent analysis"
-  echo -e "  ${MAGENTA}/finance-budget${NC}      — Cash flow & budget analysis"
-  echo -e "  ${MAGENTA}/finance-debt${NC}        — Debt payoff strategy (avalanche/snowball)"
-  echo -e "  ${MAGENTA}/finance-emergency${NC}   — Emergency fund target & plan"
-  echo -e "  ${MAGENTA}/finance-portfolio${NC}   — Investment allocation review"
-  echo -e "  ${MAGENTA}/finance-retirement${NC}  — Retirement projections"
-  echo -e "  ${MAGENTA}/finance-fire${NC}        — FIRE (Financial Independence) calculator"
-  echo -e "  ${MAGENTA}/finance-taxes${NC}       — Tax optimization opportunities"
-  echo -e "  ${MAGENTA}/finance-networth${NC}    — Net worth tracker"
-  echo -e "  ${MAGENTA}/finance-goals${NC}       — Goal-based planning"
-  echo -e "  ${MAGENTA}/finance-compare${NC}     — Compare scenarios side-by-side"
-  echo -e "  ${MAGENTA}/finance-screen${NC}      — Financial product screener"
-  echo -e "  ${MAGENTA}/finance-report-pdf${NC}  — Generate the PDF report"
-  echo ""
-  echo -e "${BOLD}${CYAN}Quick start:${NC} open Claude Code and type ${MAGENTA}/finance${NC}"
-  echo ""
+  echo -e "${BOLD}${CYAN}Quick start:${NC} open Antigravity in your workspace or ask for ${MAGENTA}finance-analyze${NC} / ${MAGENTA}finance-quick${NC}"
   echo -e "${YELLOW}⚠  This is NOT financial advice. Consult a licensed financial advisor.${NC}"
   echo ""
 }
@@ -232,8 +274,12 @@ main() {
   if [ "$IS_LOCAL" -eq 1 ]; then
     ok "Local install detected (source: ${SOURCE_DIR})"
   else
-    info "Remote install (curl | bash) detected"
+    info "Remote install detected"
     fetch_remote
+  fi
+
+  if [ "$INSTALL_MODE" = "docker" ]; then
+    install_docker_localhost
   fi
 
   echo ""
@@ -242,9 +288,9 @@ main() {
   check_reportlab
 
   echo ""
-  info "Creating Claude directories..."
-  mkdir -p "${SKILLS_DIR}" "${AGENTS_DIR}"
-  ok "~/.claude/skills/ and ~/.claude/agents/ ready"
+  info "Creating skill directories (${TARGET_LABEL})..."
+  mkdir -p "${SKILLS_DIR}"
+  ok "${SKILLS_DIR} ready"
 
   echo ""
   info "Installing components..."

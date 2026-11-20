@@ -42,10 +42,10 @@ If no files are found, prompt user to first run `/finance analyze` or `/finance 
 ```
 ls FINANCE-*.md
 ```
-Read every file found. The Python generator script also performs its own scan; Claude pre-reads to validate content quality and surface any obvious gaps before generating.
+Read every file found and validate content quality and surface any obvious gaps before generating.
 
-### Step 2: Extract Data
-Pull from the markdown files:
+### Step 2: Extract Data & Write JSON Payload
+Pull from the markdown files and write a JSON file (e.g. `FINANCE-PLAN-data.json`) matching the schema in `_demo_data()` inside `scripts/generate_finance_pdf.py`:
 
 - **Composite Financial Health Score** (0-100) and letter grade
 - **Sub-scores** for each of the 5 categories (Cash Flow, Debt, Investments, Retirement, Protection)
@@ -64,11 +64,12 @@ Pull from the markdown files:
 ### Step 3: Run the PDF Generator
 
 Execute:
+```bash
+python3 scripts/generate_finance_pdf.py --data FINANCE-PLAN-data.json --output FINANCE-PLAN.pdf
 ```
-Bash(python3 ~/.claude/skills/finance/scripts/generate_finance_pdf.py)
-```
+(Or, if running from a global AGY install outside the repo: `python3 ~/.gemini/antigravity/skills/finance/scripts/generate_finance_pdf.py --data FINANCE-PLAN-data.json --output FINANCE-PLAN.pdf`, or `curl -sS -X POST http://localhost:8787/generate -H 'Content-Type: application/json' -d @FINANCE-PLAN-data.json -o FINANCE-PLAN.pdf` when using the localhost Docker service.)
 
-The script reads all FINANCE-*.md files from the current working directory, parses the structured sections, and assembles a PDF using ReportLab.
+The script reads the structured JSON payload and assembles a 9-page PDF using ReportLab.
 
 If the script is missing or errors, gracefully fall back to a markdown-only consolidated report named `FINANCE-PLAN.md` and inform the user.
 
@@ -191,11 +192,11 @@ If the user wants to customize:
 ```
 User: /finance report-pdf
 
-Claude: Scanning current directory for FINANCE-*.md files...
-        Found: FINANCE-ANALYSIS.md, FINANCE-DEBT.md, FINANCE-RETIREMENT.md, FINANCE-BUDGET.md
+Agent: Scanning current directory for FINANCE-*.md files...
+      Found: FINANCE-ANALYSIS.md, FINANCE-DEBT.md, FINANCE-RETIREMENT.md, FINANCE-BUDGET.md
 
-        Generating PDF...
-        [runs Bash(python3 ~/.claude/skills/finance/scripts/generate_finance_pdf.py)]
+      Generating PDF...
+      [runs python3 scripts/generate_finance_pdf.py --data FINANCE-PLAN-data.json --output FINANCE-PLAN.pdf]
 
         Done. Generated FINANCE-PLAN.pdf (12 pages, 487 KB).
 
