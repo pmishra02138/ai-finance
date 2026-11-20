@@ -1,0 +1,526 @@
+#!/usr/bin/env python3
+"""
+End-to-end test suite for ai-finance.
+
+Covers:
+1. Repository & AGY skill integrity (.agents/skills symlinks, YAML frontmatter, disclaimers)
+2. Installer & uninstaller E2E in an isolated temporary HOME directory
+3. PDF generator CLI & edge-case tests (skipped cleanly if reportlab is absent)
+4. Localhost HTTP server E2E tests (health, error handling, and PDF endpoints)
+5. Docker configuration presence & sanity checks
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import os
+import socket
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import unittest
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SCRIPTS_DIR = REPO_ROOT / "scripts"
+HAS_REPORTLAB = importlib.util.find_spec("reportlab") is not None
+HAS_FASTAPI = importlib.util.find_spec("fastapi") is not None
+HAS_UVICORN = importlib.util.find_spec("uvicorn") is not None
+
+
+class TestRepositoryAndSkills(unittest.TestCase):
+    """Verify AGY workspace skill layout, frontmatter, and tool conventions."""
+
+    def test_agents_skills_symlinks_resolve(self) -> None:
+        agents_skills = REPO_ROOT / ".agents" / "skills"
+        self.assertTrue(agents_skills.is_dir(), ".agents/skills/ directory missing")
+        entries = sorted(p.name for p in agents_skills.iterdir())
+        self.assertIn("finance", entries)
+        finance_sub = [e for e in entries if e.startswith("finance-")]
+        self.assertEqual(len(finance_sub), 14, f"Expected 14 sub-skills, found {len(finance_sub)}")
+
+        for entry in entries:
+            skill_md = agents_skills / entry / "SKILL.md"
+            self.assertTrue(skill_md.is_file(), f"Missing SKILL.md for {entry}")
+
+    def test_all_skills_have_frontmatter_and_disclaimer(self) -> None:
+        skill_files = [REPO_ROOT / "finance" / "SKILL.md"] + sorted(
+            (REPO_ROOT / "skills").glob("finance-*/SKILL.md")
+        )
+        self.assertEqual(len(skill_files), 15)
+        for path in skill_files:
+            text = path.read_text(encoding="utf-8")
+            self.assertTrue(text.startswith("---\n"), f"{path} missing YAML frontmatter start")
+            parts = text.split("---\n", 2)
+            self.assertGreaterEqual(len(parts), 3, f"{path} malformed YAML frontmatter")
+            fm = parts[1]
+            self.assertRegex(fm, r"(?m)^name:\s*\S+", f"{path} missing frontmatter 'name'")
+            self.assertRegex(fm, r"(?m)^description:\s*\S+", f"{path} missing frontmatter 'description'")
+            self.assertIn("not financial advice", text.lower(), f"{path} missing disclaimer")
+
+    def test_agy_skills_do_not_use_claude_only_instructions(self) -> None:
+        checked = [
+            REPO_ROOT / "finance" / "SKILL.md",
+            REPO_ROOT / "skills" / "finance-analyze" / "SKILL.md",
+            REPO_ROOT / "skills" / "finance-report-pdf" / "SKILL.md",
+            REPO_ROOT / "skills" / "finance-quick" / "SKILL.md",
+        ]
+        for path in checked:
+            text = path.read_text(encoding="utf-8")
+            self.assertNotIn("~/.claude/", text, f"{path} still references ~/.claude/")
+            self.assertNotIn("Task tool", text, f"{path} still references Claude Task tool")
+            self.assertNotIn("Bash(", text, f"{path} still uses Claude Bash(...) syntax")
+
+
+class TestInstallerAndUninstallerE2E(unittest.TestCase):
+    """Run install.sh and uninstall.sh against an isolated temporary HOME."""
+
+    def _run_script(self, script: str, args: list[str], home_dir: str) -> subprocess.CompletedProcess:
+        env = os.environ.copy()
+        env["HOME"] = home_dir
+        return subprocess.run(
+            ["bash", str(REPO_ROOT / script), *args],
+            cwd=str(REPO_ROOT),
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    def test_install_help(self) -> None:
+        res = subprocess.run(
+            ["bash", str(REPO_ROOT / "install.sh"), "--help"],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertIn("--docker", res.stdout)
+        self.assertIn("--agy", res.stdout)
+
+    def test_local_agy_install_and_uninstall_roundtrip(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_home:
+            res = self._run_script("install.sh", ["--local", "--agy"], tmp_home)
+            self.assertEqual(res.returncode, 0, res.stdout + "\n" + res.stderr)
+
+            agy_skills = Path(tmp_home) / ".gemini" / "antigravity" / "skills"
+            self.assertTrue((agy_skills / "finance" / "SKILL.md").is_file())
+            self.assertTrue((agy_skills / "finance" / "scripts" / "generate_finance_pdf.py").is_file())
+            self.assertTrue((agy_skills / "finance" / "scripts" / "server.py").is_file())
+            installed_sub = list(agy_skills.glob("finance-*/SKILL.md"))
+            self.assertEqual(len(installed_sub), 14)
+
+            unres = self._run_script("uninstall.sh", ["--yes"], tmp_home)
+            self.assertEqual(unres.returncode, 0, unres.stdout + "\n" + unres.stderr)
+            self.assertFalse((agy_skills / "finance").exists())
+            self.assertEqual(list(agy_skills.glob("finance-*")), [])
+
+    def test_local_claude_install_and_uninstall_roundtrip(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_home:
+            res = self._run_script("install.sh", ["--local", "--claude"], tmp_home)
+            self.assertEqual(res.returncode, 0, res.stdout + "\n" + res.stderr)
+
+            claude_skills = Path(tmp_home) / ".claude" / "skills"
+            self.assertTrue((claude_skills / "finance" / "SKILL.md").is_file())
+            self.assertEqual(len(list(claude_skills.glob("finance-*/SKILL.md"))), 14)
+
+            unres = self._run_script("uninstall.sh", ["-y"], tmp_home)
+            self.assertEqual(unres.returncode, 0, unres.stdout + "\n" + unres.stderr)
+            self.assertFalse((claude_skills / "finance").exists())
+            self.assertEqual(list(claude_skills.glob("finance-*")), [])
+
+
+class TestPDFGeneratorCLI(unittest.TestCase):
+    """Test scripts/generate_finance_pdf.py CLI behavior and edge cases."""
+
+    @unittest.skipUnless(HAS_REPORTLAB, "reportlab not installed in current Python environment")
+    def test_demo_pdf_generation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            out_pdf = Path(tmp_dir) / "FINANCE-PLAN.pdf"
+            res = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS_DIR / "generate_finance_pdf.py"),
+                    "--demo",
+                    "--output",
+                    str(out_pdf),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(res.returncode, 0, res.stderr)
+            self.assertTrue(out_pdf.is_file())
+            data = out_pdf.read_bytes()
+            self.assertTrue(data.startswith(b"%PDF-"))
+            self.assertGreater(len(data), 5000)
+
+    @unittest.skipUnless(HAS_REPORTLAB, "reportlab not installed in current Python environment")
+    def test_xml_special_chars_and_empty_lists(self) -> None:
+        payload = {
+            "client_name": "Smith & Co. <VIP>",
+            "health_score": 72,
+            "executive_summary": "Assets > liabilities & cashflow < target.",
+            "categories": {"cash_flow": 80, "debt": 60, "investments": 70, "retirement": 75, "protection": 75},
+            "category_notes": {"cash_flow": "A & B <test>"},
+            "cash_flow": {"monthly_income": 5000, "expenses": [["Rent & Utilities", 2000]], "commentary": "Save > 20%"},
+            "debt": {"accounts": [], "payoff_months": 0, "total_interest": 0},
+            "investments": {"total_value": 0, "allocation": [], "commentary": "Start & diversify <soon>"},
+            "retirement": {"current_age": 30, "retirement_age": 65, "current_balance": 10000, "target_balance": 1000000, "monthly_contribution": 500, "scenarios": []},
+            "protection": {"items": [{"name": "Health & Dental", "status": "Good", "recommendation": "Keep <$500 deductible"}], "commentary": "OK & active"},
+            "action_items": [{"action": "Open HSA & invest <10% fees", "category": "Tax", "priority": "High", "impact": "High"}],
+            "ninety_day_plan": {"month_1": ["Review & update <beneficiaries>"], "month_2": [], "month_3": [], "after_90_days": "Re-run & check"},
+        }
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            json_path = Path(tmp_dir) / "plan.json"
+            out_pdf = Path(tmp_dir) / "edge.pdf"
+            json_path.write_text(json.dumps(payload), encoding="utf-8")
+            res = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS_DIR / "generate_finance_pdf.py"),
+                    "--data",
+                    str(json_path),
+                    "--output",
+                    str(out_pdf),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(res.returncode, 0, res.stderr)
+            self.assertTrue(out_pdf.read_bytes().startswith(b"%PDF-"))
+
+    @unittest.skipUnless(HAS_REPORTLAB, "reportlab not installed in current Python environment")
+    def test_non_dict_json_root_fails_cleanly(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            json_path = Path(tmp_dir) / "bad.json"
+            json_path.write_text("[1, 2, 3]", encoding="utf-8")
+            res = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS_DIR / "generate_finance_pdf.py"),
+                    "--data",
+                    str(json_path),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(res.returncode, 0)
+            self.assertIn("object", res.stderr.lower())
+
+
+class TestDatabaseLayer(unittest.TestCase):
+    """Test SQLite persistence, default user seeding (user/password), sessions, and plan CRUD."""
+
+    def test_default_user_auth_and_plan_crud(self) -> None:
+        if str(SCRIPTS_DIR) not in sys.path:
+            sys.path.insert(0, str(SCRIPTS_DIR))
+        import db as finance_db
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = str(Path(tmp_dir) / "test.db")
+            finance_db.init_db(db_path=db_path, seed_demo_payload={"client_name": "Seeded", "health_score": 70, "grade": "B"})
+
+            # Default user / password works
+            auth = finance_db.authenticate_user("user", "password", db_path=db_path)
+            self.assertIsNotNone(auth)
+            self.assertEqual(auth["user"]["username"], "user")
+            token = auth["token"]
+            user_id = auth["user"]["id"]
+
+            # Wrong password fails
+            self.assertIsNone(finance_db.authenticate_user("user", "wrong", db_path=db_path))
+
+            # Token lookup
+            me = finance_db.get_user_by_token(token, db_path=db_path)
+            self.assertEqual(me["username"], "user")
+
+            # Seeded plan exists
+            plans = finance_db.list_plans(user_id, db_path=db_path)
+            self.assertEqual(len(plans), 1)
+
+            # Create / get / update / delete plan
+            created = finance_db.create_plan(user_id, "My Plan", 82.0, "A-", {"client_name": "My Plan"}, db_path=db_path)
+            fetched = finance_db.get_plan(user_id, created["id"], db_path=db_path)
+            self.assertEqual(fetched["title"], "My Plan")
+
+            updated = finance_db.update_plan(user_id, created["id"], "Updated Plan", 90.0, "A+", {"client_name": "Updated Plan"}, db_path=db_path)
+            self.assertEqual(updated["title"], "Updated Plan")
+            self.assertEqual(updated["grade"], "A+")
+
+            self.assertTrue(finance_db.delete_plan(user_id, created["id"], db_path=db_path))
+            self.assertIsNone(finance_db.get_plan(user_id, created["id"], db_path=db_path))
+
+            # Revoke token
+            finance_db.revoke_token(token, db_path=db_path)
+            self.assertIsNone(finance_db.get_user_by_token(token, db_path=db_path))
+
+
+class TestLocalhostServerE2E(unittest.TestCase):
+    """Test FastAPI backend + SQLite + Node.js unified frontend proxy end-to-end."""
+
+    @staticmethod
+    def _free_port() -> int:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("127.0.0.1", 0))
+            return s.getsockname()[1]
+
+    @unittest.skipUnless(
+        HAS_REPORTLAB and HAS_FASTAPI and HAS_UVICORN,
+        "reportlab, fastapi, and uvicorn must be installed in current Python environment",
+    )
+    def test_fullstack_auth_crud_pdf_and_node_proxy(self) -> None:
+        if str(SCRIPTS_DIR) not in sys.path:
+            sys.path.insert(0, str(SCRIPTS_DIR))
+        import uvicorn
+        import server as pdf_server
+
+        api_port = self._free_port()
+        fe_port = self._free_port()
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            prev_db = os.environ.get("AI_FINANCE_DB_PATH")
+            os.environ["AI_FINANCE_DB_PATH"] = str(Path(tmp_dir) / "e2e.db")
+
+            config = uvicorn.Config(pdf_server.app, host="127.0.0.1", port=api_port, log_level="error")
+            uv_server = uvicorn.Server(config)
+            api_thread = threading.Thread(target=uv_server.run, daemon=True)
+            api_thread.start()
+
+            fe_env = os.environ.copy()
+            fe_env["HOST"] = "127.0.0.1"
+            fe_env["PORT"] = str(fe_port)
+            fe_env["BACKEND_URL"] = f"http://127.0.0.1:{api_port}"
+            fe_proc = subprocess.Popen(
+                ["node", str(REPO_ROOT / "frontend" / "server.js")],
+                env=fe_env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+
+            try:
+                api_base = f"http://127.0.0.1:{api_port}"
+                fe_base = f"http://127.0.0.1:{fe_port}"
+
+                # Wait for both servers
+                for url in (f"{api_base}/health", f"{fe_base}/api/health"):
+                    ready = False
+                    for _ in range(40):
+                        try:
+                            with urllib.request.urlopen(url) as resp:
+                                if resp.status == 200:
+                                    ready = True
+                                    break
+                        except Exception:
+                            time.sleep(0.1)
+                    self.assertTrue(ready, f"Server not ready at {url}")
+
+                # 1. FastAPI root returns JSON for API clients and redirects browsers to :3000
+                with urllib.request.urlopen(f"{api_base}/") as resp:
+                    self.assertEqual(resp.status, 200)
+                    root_body = json.loads(resp.read().decode("utf-8"))
+                    self.assertEqual(root_body["status"], "ok")
+
+                class NoRedirect(urllib.request.HTTPRedirectHandler):
+                    def redirect_request(self, req, fp, code, msg, headers, newurl):
+                        return None
+
+                opener = urllib.request.build_opener(NoRedirect)
+                html_req = urllib.request.Request(f"{api_base}/", headers={"Accept": "text/html"})
+                with self.assertRaises(urllib.error.HTTPError) as ctx:
+                    opener.open(html_req)
+                self.assertEqual(ctx.exception.code, 307)
+                self.assertTrue(ctx.exception.headers.get("Location", "").endswith(":3000"))
+
+                # 2. Node.js frontend serves HTML, CSS, and modular JS files
+                for asset, snippet in (
+                    ("/", "AI Personal Finance Advisor"),
+                    ("/styles.css", ".topbar"),
+                    ("/charts.js", "FinanceCharts"),
+                    ("/skills.js", "FinanceSkills"),
+                    ("/app.js", "/auth/login"),
+                ):
+                    with urllib.request.urlopen(f"{fe_base}{asset}") as resp:
+                        self.assertEqual(resp.status, 200)
+                        self.assertIn(snippet, resp.read().decode("utf-8"))
+
+                # 2b. /api/skills returns all 14 skills across 5 stages
+                with urllib.request.urlopen(f"{fe_base}/api/skills") as resp:
+                    self.assertEqual(resp.status, 200)
+                    catalog = json.loads(resp.read().decode("utf-8"))
+                    self.assertEqual(len(catalog["stages"]), 5)
+                    self.assertEqual(catalog["total_skills"], 14)
+
+                # 2c. User registration works & duplicate returns 409
+                reg_req = urllib.request.Request(
+                    f"{fe_base}/api/auth/register",
+                    data=json.dumps({"username": "alice_test", "password": "secret123"}).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(reg_req) as resp:
+                    self.assertEqual(resp.status, 201)
+                    reg_data = json.loads(resp.read().decode("utf-8"))
+                    self.assertEqual(reg_data["user"]["username"], "alice_test")
+
+                dup_req = urllib.request.Request(
+                    f"{fe_base}/api/auth/register",
+                    data=json.dumps({"username": "alice_test", "password": "secret123"}).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with self.assertRaises(urllib.error.HTTPError) as ctx:
+                    urllib.request.urlopen(dup_req)
+                self.assertEqual(ctx.exception.code, 409)
+
+                # 3. Unauthenticated /api/plans returns 401
+                with self.assertRaises(urllib.error.HTTPError) as ctx:
+                    urllib.request.urlopen(f"{fe_base}/api/plans")
+                self.assertEqual(ctx.exception.code, 401)
+
+                # 4. Login with wrong password returns 401
+                bad_login = urllib.request.Request(
+                    f"{fe_base}/api/auth/login",
+                    data=json.dumps({"username": "user", "password": "bad"}).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with self.assertRaises(urllib.error.HTTPError) as ctx:
+                    urllib.request.urlopen(bad_login)
+                self.assertEqual(ctx.exception.code, 401)
+
+                # 5. Login with default user/password succeeds through Node proxy
+                login_req = urllib.request.Request(
+                    f"{fe_base}/api/auth/login",
+                    data=json.dumps({"username": "user", "password": "password"}).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(login_req) as resp:
+                    self.assertEqual(resp.status, 200)
+                    auth_data = json.loads(resp.read().decode("utf-8"))
+                token = auth_data["token"]
+                self.assertEqual(auth_data["user"]["username"], "user")
+                auth_headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+                # 6. /api/auth/me & seeded /api/plans
+                with urllib.request.urlopen(urllib.request.Request(f"{fe_base}/api/auth/me", headers=auth_headers)) as resp:
+                    self.assertEqual(json.loads(resp.read().decode("utf-8"))["username"], "user")
+
+                with urllib.request.urlopen(urllib.request.Request(f"{fe_base}/api/plans", headers=auth_headers)) as resp:
+                    plans = json.loads(resp.read().decode("utf-8"))["plans"]
+                    self.assertGreaterEqual(len(plans), 1)
+
+                # 7. Create -> Update -> PDF -> Delete plan via Node proxy
+                create_req = urllib.request.Request(
+                    f"{fe_base}/api/plans",
+                    data=json.dumps({"title": "E2E & Test Plan", "payload": {"client_name": "E2E & Test", "health_score": 85}}).encode("utf-8"),
+                    headers=auth_headers,
+                    method="POST",
+                )
+                with urllib.request.urlopen(create_req) as resp:
+                    self.assertEqual(resp.status, 201)
+                    created = json.loads(resp.read().decode("utf-8"))
+                plan_id = created["id"]
+
+                update_req = urllib.request.Request(
+                    f"{fe_base}/api/plans/{plan_id}",
+                    data=json.dumps({"title": "E2E Updated", "payload": {"client_name": "E2E Updated", "health_score": 92}}).encode("utf-8"),
+                    headers=auth_headers,
+                    method="PUT",
+                )
+                with urllib.request.urlopen(update_req) as resp:
+                    self.assertEqual(resp.status, 200)
+                    self.assertEqual(json.loads(resp.read().decode("utf-8"))["grade"], "A+")
+
+                # 7b. Run all 14 skills through Node proxy with sync_to_plan=True and verify SQLite persistence
+                for sk in catalog["skills"]:
+                    run_req = urllib.request.Request(
+                        f"{fe_base}/api/plans/{plan_id}/skills/{sk['name']}/run",
+                        data=json.dumps({"inputs": {}, "sync_to_plan": True}).encode("utf-8"),
+                        headers=auth_headers,
+                        method="POST",
+                    )
+                    with urllib.request.urlopen(run_req) as resp:
+                        self.assertEqual(resp.status, 200)
+                        run_body = json.loads(resp.read().decode("utf-8"))
+                        self.assertEqual(run_body["result"]["skill"], sk["name"])
+
+                with urllib.request.urlopen(urllib.request.Request(f"{fe_base}/api/plans/{plan_id}/skills", headers=auth_headers)) as resp:
+                    runs_body = json.loads(resp.read().decode("utf-8"))
+                    self.assertEqual(len(runs_body["completed_skills"]), 14)
+
+                with urllib.request.urlopen(urllib.request.Request(f"{fe_base}/api/plans/{plan_id}/pdf", headers=auth_headers)) as resp:
+                    self.assertEqual(resp.status, 200)
+                    self.assertEqual(resp.headers.get("Content-Type"), "application/pdf")
+                    self.assertTrue(resp.read().startswith(b"%PDF-"))
+
+                del_req = urllib.request.Request(f"{fe_base}/api/plans/{plan_id}", headers=auth_headers, method="DELETE")
+                with urllib.request.urlopen(del_req) as resp:
+                    self.assertEqual(resp.status, 200)
+
+                # 8. Direct /api/demo & /api/generate & 422 validation
+                with urllib.request.urlopen(f"{fe_base}/api/demo") as resp:
+                    self.assertEqual(resp.status, 200)
+                    self.assertTrue(resp.read().startswith(b"%PDF-"))
+
+                bad_req = urllib.request.Request(
+                    f"{fe_base}/api/generate",
+                    data=b"[1, 2, 3]",
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with self.assertRaises(urllib.error.HTTPError) as ctx:
+                    urllib.request.urlopen(bad_req)
+                self.assertEqual(ctx.exception.code, 422)
+
+                # 9. Logout revokes session
+                logout_req = urllib.request.Request(f"{fe_base}/api/auth/logout", headers=auth_headers, method="POST")
+                with urllib.request.urlopen(logout_req) as resp:
+                    self.assertEqual(resp.status, 200)
+                with self.assertRaises(urllib.error.HTTPError) as ctx:
+                    urllib.request.urlopen(urllib.request.Request(f"{fe_base}/api/auth/me", headers=auth_headers))
+                self.assertEqual(ctx.exception.code, 401)
+            finally:
+                fe_proc.terminate()
+                try:
+                    fe_proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    fe_proc.kill()
+                uv_server.should_exit = True
+                api_thread.join(timeout=5)
+                if prev_db is None:
+                    os.environ.pop("AI_FINANCE_DB_PATH", None)
+                else:
+                    os.environ["AI_FINANCE_DB_PATH"] = prev_db
+
+
+class TestDockerConfigs(unittest.TestCase):
+    """Verify Docker & uv files for macOS localhost deployment are valid and consistent."""
+
+    def test_docker_files_exist_and_expose_8787(self) -> None:
+        dockerfile = (REPO_ROOT / "Dockerfile").read_text(encoding="utf-8")
+        compose = (REPO_ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+        pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        reqs = (REPO_ROOT / "requirements.txt").read_text(encoding="utf-8")
+
+        self.assertIn("8787", dockerfile)
+        self.assertIn("uv sync", dockerfile)
+        self.assertIn("uvicorn", dockerfile)
+        self.assertIn("scripts.server:app", dockerfile)
+        self.assertIn("127.0.0.1:8787:8787", compose)
+        self.assertIn("fastapi", pyproject)
+        self.assertIn("reportlab>=4.0.0", pyproject)
+        self.assertIn("reportlab>=4.0.0", reqs)
+
+
+if __name__ == "__main__":
+    unittest.main()
