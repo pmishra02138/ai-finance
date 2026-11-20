@@ -35,9 +35,9 @@ import json
 import math
 import os
 import sys
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
+from xml.sax.saxutils import escape as xml_escape
 
 try:
     from reportlab.lib import colors
@@ -58,8 +58,7 @@ try:
         Table,
         TableStyle,
     )
-    from reportlab.graphics.shapes import Drawing, Rect, Circle, Line, String, Wedge, Polygon
-    from reportlab.graphics.charts.barcharts import HorizontalBarChart
+    from reportlab.graphics.shapes import Drawing, Rect, Line, String, Wedge
     from reportlab.graphics.charts.piecharts import Pie
 except ImportError as exc:  # pragma: no cover
     sys.stderr.write(
@@ -306,6 +305,11 @@ def gauge_drawing(score: float, width: float = 4.2 * inch, height: float = 2.3 *
     return d
 
 
+def esc(value: Any) -> str:
+    """Escape dynamic text for safe interpolation into ReportLab Paragraph XML."""
+    return xml_escape(str(value))
+
+
 def category_bar(label: str, score: float, width: float = 6.5 * inch) -> Table:
     """A single horizontal bar row used on the score dashboard."""
     score = max(0.0, min(100.0, float(score)))
@@ -317,7 +321,7 @@ def category_bar(label: str, score: float, width: float = 6.5 * inch) -> Table:
     d.add(Rect(0, 0.06 * inch, track_w, 0.16 * inch, fillColor=HexColor("#eef1f6"), strokeColor=None))
     d.add(Rect(0, 0.06 * inch, bar_w, 0.16 * inch, fillColor=fill, strokeColor=None))
 
-    label_para = Paragraph(f"<b>{label}</b>", ParagraphStyle("lbl", fontName="Helvetica-Bold", fontSize=10, textColor=INK, leading=12))
+    label_para = Paragraph(f"<b>{esc(label)}</b>", ParagraphStyle("lbl", fontName="Helvetica-Bold", fontSize=10, textColor=INK, leading=12))
     score_para = Paragraph(
         f"<font color='#1f2937'><b>{int(round(score))}</b></font> "
         f"<font color='#6b7280' size=8>/ 100</font>",
@@ -339,6 +343,9 @@ def category_bar(label: str, score: float, width: float = 6.5 * inch) -> Table:
 def pie_drawing(slices: List[Tuple[str, float]], width: float = 3.4 * inch, height: float = 3.0 * inch) -> Drawing:
     """Allocation pie chart."""
     d = Drawing(width, height)
+    if not slices:
+        d.add(String(width / 2, height / 2, "No allocation data", fontName="Helvetica", fontSize=10, fillColor=MUTED, textAnchor="middle"))
+        return d
     p = Pie()
     p.x = 0.4 * inch
     p.y = 0.2 * inch
@@ -414,17 +421,17 @@ def build_cover(story: List[Any], styles: Dict[str, ParagraphStyle], data: Dict[
 
     story.append(Spacer(1, 0.4 * inch))
     story.append(Paragraph("FINANCIAL HEALTH REPORT", styles["kicker"]))
-    story.append(Paragraph(client, styles["title"]))
-    story.append(Paragraph(f"Prepared {as_of}", styles["subtitle"]))
+    story.append(Paragraph(esc(client), styles["title"]))
+    story.append(Paragraph(f"Prepared {esc(as_of)}", styles["subtitle"]))
 
     story.append(Spacer(1, 0.15 * inch))
     story.append(gauge_drawing(score, width=4.6 * inch, height=2.4 * inch))
     story.append(Spacer(1, 0.05 * inch))
 
     grade_box = Table(
-        [[Paragraph(f"<font size=22 color='#0c1220'><b>{grade}</b></font>", styles["body"]),
+        [[Paragraph(f"<font size=22 color='#0c1220'><b>{esc(grade)}</b></font>", styles["body"]),
           Paragraph(f"<font size=11 color='#6b7280'>OVERALL GRADE</font>", styles["body"])],
-         [Paragraph(f"<font size=13 color='{hexstr(score_color(score))}'><b>{signal}</b></font>", styles["body"]),
+         [Paragraph(f"<font size=13 color='{hexstr(score_color(score))}'><b>{esc(signal)}</b></font>", styles["body"]),
           Paragraph(f"<font size=11 color='#6b7280'>SIGNAL</font>", styles["body"])]],
         colWidths=[2.6 * inch, 2.6 * inch],
         rowHeights=[0.45 * inch, 0.45 * inch],
@@ -450,7 +457,7 @@ def build_cover(story: List[Any], styles: Dict[str, ParagraphStyle], data: Dict[
         "Each section includes a score, key findings, and prioritized actions."
     )
     story.append(Paragraph("Executive Summary", styles["h2"]))
-    story.append(Paragraph(summary, styles["body_just"]))
+    story.append(Paragraph(esc(summary), styles["body_just"]))
 
     story.append(PageBreak())
 
@@ -486,7 +493,7 @@ def build_score_dashboard(story: List[Any], styles: Dict[str, ParagraphStyle], d
         ("Protection", notes.get("protection", "—")),
     ]
     for label, note in note_rows:
-        story.append(Paragraph(f"<b>{label}.</b> {note}", styles["body"]))
+        story.append(Paragraph(f"<b>{esc(label)}.</b> {esc(note)}", styles["body"]))
 
     story.append(PageBreak())
 
@@ -494,7 +501,7 @@ def build_score_dashboard(story: List[Any], styles: Dict[str, ParagraphStyle], d
 def build_cash_flow(story: List[Any], styles: Dict[str, ParagraphStyle], data: Dict[str, Any]) -> None:
     cf = data.get("cash_flow", {})
     income = float(cf.get("monthly_income", 0))
-    expenses_list: List[Tuple[str, float]] = cf.get("expenses", []) or []
+    expenses_list: List[Tuple[str, float]] = [(str(n), float(v)) for n, v in (cf.get("expenses", []) or [])]
     total_exp = sum(v for _, v in expenses_list)
     surplus = income - total_exp
     savings_rate = (surplus / income * 100.0) if income else 0.0
@@ -554,7 +561,7 @@ def build_cash_flow(story: List[Any], styles: Dict[str, ParagraphStyle], data: D
         "Your largest expense categories drive the most leverage. "
         "A 5% reduction in housing and food typically yields the highest savings rate gains."
     )
-    story.append(Paragraph(f"<b>Insight.</b> {commentary}", styles["body_just"]))
+    story.append(Paragraph(f"<b>Insight.</b> {esc(commentary)}", styles["body_just"]))
 
     story.append(PageBreak())
 
@@ -570,7 +577,7 @@ def build_debt_summary(story: List[Any], styles: Dict[str, ParagraphStyle], data
 
     story.append(Paragraph("Debt Summary & Payoff Plan", styles["h1"]))
     story.append(Paragraph(
-        f"Strategy: <b>{method}</b>. The avalanche method minimizes total interest by attacking the highest-APR balance first. "
+        f"Strategy: <b>{esc(method)}</b>. The avalanche method minimizes total interest by attacking the highest-APR balance first. "
         "The snowball method builds momentum by attacking the smallest balance first.",
         styles["body_just"]))
     story.append(Spacer(1, 0.1 * inch))
@@ -644,7 +651,8 @@ def build_debt_summary(story: List[Any], styles: Dict[str, ParagraphStyle], data
 def build_investments(story: List[Any], styles: Dict[str, ParagraphStyle], data: Dict[str, Any]) -> None:
     inv = data.get("investments", {})
     total = float(inv.get("total_value", 0))
-    allocation: List[Tuple[str, float]] = [(a["name"], float(a["pct"])) for a in inv.get("allocation", [])]
+    raw_alloc = inv.get("allocation", []) or []
+    allocation: List[Tuple[str, float]] = [(a.get("name", "—"), float(a.get("pct", 0))) for a in raw_alloc]
 
     story.append(Paragraph("Investment Allocation", styles["h1"]))
     story.append(Paragraph(
@@ -679,12 +687,12 @@ def build_investments(story: List[Any], styles: Dict[str, ParagraphStyle], data:
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
     ]))
 
-    layout = Table([[pie, tbl]], colWidths=[3.6 * inch, 3.6 * inch])
+    layout = Table([[pie, tbl]], colWidths=[3.45 * inch, 3.65 * inch])
     layout.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")]))
     story.append(layout)
 
     story.append(Spacer(1, 0.2 * inch))
-    story.append(Paragraph(f"<b>Allocation insight.</b> {commentary}", styles["body_just"]))
+    story.append(Paragraph(f"<b>Allocation insight.</b> {esc(commentary)}", styles["body_just"]))
 
     story.append(PageBreak())
 
@@ -764,7 +772,7 @@ def build_retirement(story: List[Any], styles: Dict[str, ParagraphStyle], data: 
         f"To close the gap, increasing contributions by ~10–15% or adding $300–$500/mo can "
         f"materially shift your projected balance by {years_left} years from now."
     )
-    story.append(Paragraph(f"<b>Retirement insight.</b> {insight}", styles["body_just"]))
+    story.append(Paragraph(f"<b>Retirement insight.</b> {esc(insight)}", styles["body_just"]))
 
     story.append(PageBreak())
 
@@ -819,7 +827,7 @@ def build_protection(story: List[Any], styles: Dict[str, ParagraphStyle], data: 
         "Term life insurance is cheap when you're young and healthy — lock in coverage early. "
         "Disability insurance is often the most overlooked policy and protects your largest asset: your future income."
     )
-    story.append(Paragraph(f"<b>Protection insight.</b> {note}", styles["body_just"]))
+    story.append(Paragraph(f"<b>Protection insight.</b> {esc(note)}", styles["body_just"]))
 
     story.append(PageBreak())
 
@@ -839,7 +847,7 @@ def build_action_items(story: List[Any], styles: Dict[str, ParagraphStyle], data
     for i, a in enumerate(actions, start=1):
         rows.append([
             str(i),
-            Paragraph(a.get("action", "—"), ParagraphStyle("ai", fontName="Helvetica", fontSize=9.5, leading=12)),
+            Paragraph(esc(a.get("action", "—")), ParagraphStyle("ai", fontName="Helvetica", fontSize=9.5, leading=12)),
             a.get("category", "—"),
             a.get("priority", "—"),
             a.get("impact", "—"),
@@ -889,15 +897,15 @@ def build_90_day_plan(story: List[Any], styles: Dict[str, ParagraphStyle], data:
 
     def month_block(title: str, color: Color, items: List[str]) -> Table:
         header = Paragraph(
-            f"<font color='#ffffff'><b>{title}</b></font>",
+            f"<font color='#ffffff'><b>{esc(title)}</b></font>",
             ParagraphStyle("mh", fontName="Helvetica-Bold", fontSize=12, alignment=TA_CENTER, leading=14),
         )
         body_lines = []
         for it in items or ["—"]:
-            body_lines.append(f"• {it}")
+            body_lines.append(f"• {esc(it)}")
         body_para = Paragraph("<br/>".join(body_lines),
                               ParagraphStyle("mb", fontName="Helvetica", fontSize=9.5, leading=13, textColor=INK))
-        t = Table([[header], [body_para]], colWidths=[2.15 * inch], rowHeights=[0.38 * inch, 2.4 * inch])
+        t = Table([[header], [body_para]], colWidths=[2.15 * inch], rowHeights=[0.38 * inch, None])
         t.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), color),
             ("BACKGROUND", (0, 1), (-1, 1), SOFT),
@@ -926,7 +934,7 @@ def build_90_day_plan(story: List[Any], styles: Dict[str, ParagraphStyle], data:
         "Re-run /finance to recalculate your Financial Health Score. Most users see "
         "10–20 point gains in the first 90 days of focused execution."
     )
-    story.append(Paragraph(after, styles["body_just"]))
+    story.append(Paragraph(esc(after), styles["body_just"]))
 
     story.append(Spacer(1, 0.3 * inch))
     # Final disclaimer block
@@ -1109,7 +1117,7 @@ def build_pdf(data: Dict[str, Any], output_path: str) -> None:
         title=f"Financial Plan — {data.get('client_name','Personal')}",
         author="AI Personal Finance Advisor",
         subject="Personal Financial Plan",
-        creator="ai-finance-claude",
+        creator="ai-finance",
     )
     frame = Frame(
         MARGIN_L, MARGIN_B,
@@ -1141,8 +1149,8 @@ def main() -> int:
         description="Generate a Personal Financial Plan PDF (AI Personal Finance Advisor)."
     )
     parser.add_argument("--data", help="Path to a JSON file containing plan data.")
-    parser.add_argument("--output", default="FINANCE-PLAN.pdf",
-                        help="Output PDF path (default: FINANCE-PLAN.pdf).")
+    parser.add_argument("--output", default=None,
+                        help="Output PDF path (default: FINANCE-PLAN.pdf, or FINANCE-PLAN-sample.pdf for --demo).")
     parser.add_argument("--demo", action="store_true",
                         help="Generate a sample report with built-in demo data.")
     args = parser.parse_args()
@@ -1152,27 +1160,30 @@ def main() -> int:
 
     if args.demo:
         data = _demo_data()
-        if args.output == "FINANCE-PLAN.pdf":
-            args.output = "FINANCE-PLAN-sample.pdf"
+        output_path = args.output or "FINANCE-PLAN-sample.pdf"
     else:
+        output_path = args.output or "FINANCE-PLAN.pdf"
         try:
             with open(args.data, "r", encoding="utf-8") as fh:
                 data = json.load(fh)
         except (OSError, json.JSONDecodeError) as exc:
             sys.stderr.write(f"ERROR reading --data file: {exc}\n")
             return 1
+        if not isinstance(data, dict):
+            sys.stderr.write("ERROR: --data JSON root must be an object.\n")
+            return 1
 
-    out_dir = os.path.dirname(os.path.abspath(args.output))
+    out_dir = os.path.dirname(os.path.abspath(output_path))
     if out_dir and not os.path.exists(out_dir):
         os.makedirs(out_dir, exist_ok=True)
 
     try:
-        build_pdf(data, args.output)
+        build_pdf(data, output_path)
     except Exception as exc:  # pragma: no cover
         sys.stderr.write(f"ERROR generating PDF: {exc}\n")
         return 2
 
-    print(f"✓ Generated: {args.output}")
+    print(f"✓ Generated: {output_path}")
     return 0
 
 
