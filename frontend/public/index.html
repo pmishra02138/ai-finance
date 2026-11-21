@@ -12,12 +12,11 @@
       <span class="brand-dot"></span>
       <div>
         <h1>AI Personal Finance Advisor</h1>
-        <p class="subtitle">14-Skill Financial Planning Hub, SQLite Persistence &amp; PDF Engine</p>
+        <p class="subtitle">Personal Financial Planning Hub &amp; PDF Report Generator</p>
       </div>
     </div>
     <div id="userControls" class="user-controls hidden">
       <span id="userBadge" class="badge"></span>
-      <a class="btn ghost sm" href="/api/docs" target="_blank">API Docs</a>
       <button id="logoutBtn" class="btn secondary sm" type="button">Log Out</button>
     </div>
   </header>
@@ -32,7 +31,10 @@
         </div>
 
         <form id="loginForm">
-          <p class="muted">Default local account: <code>user</code> / <code>password</code></p>
+          <div class="welcome-note">
+            <strong>Welcome back</strong>
+            <span>Sign in to manage your financial plan.</span>
+          </div>
           <label>
             Username
             <input id="usernameInput" type="text" value="user" required autocomplete="username" />
@@ -46,7 +48,10 @@
         </form>
 
         <form id="registerForm" class="hidden">
-          <p class="muted">Create a new local account stored in SQLite (with its own starter plan).</p>
+          <div class="welcome-note">
+            <strong>Create your account</strong>
+            <span>Start building your personal finance plan.</span>
+          </div>
           <label>
             New Username (3-32 chars)
             <input id="regUsernameInput" type="text" required minlength="3" maxlength="32" autocomplete="username" />
@@ -69,6 +74,13 @@
             <h2>Active Plan</h2>
             <button id="newPlanBtn" class="btn primary sm" type="button">+ New</button>
           </div>
+          <div id="newPlanRow" class="new-plan-row hidden">
+            <input id="newPlanNameInput" type="text" placeholder="e.g. 2027 Retirement Plan" maxlength="80" />
+            <div class="new-plan-btns">
+              <button id="confirmNewPlanBtn" class="btn primary sm" type="button">Create</button>
+              <button id="cancelNewPlanBtn" class="btn ghost sm" type="button">Cancel</button>
+            </div>
+          </div>
           <select id="planSelect" class="plan-select" aria-label="Select Financial Plan"></select>
           <div class="plan-mini-actions">
             <button id="overviewNavBtn" class="btn ghost sm full" type="button">Plan Overview</button>
@@ -78,7 +90,7 @@
 
         <div class="card sidebar-card">
           <div class="sidebar-header">
-            <h2>5-Stage Skills Hub</h2>
+            <h2>Planning Modules</h2>
             <span id="completionPill" class="pill sm">0/14</span>
           </div>
           <nav id="stageNav" class="stage-nav"></nav>
@@ -105,8 +117,6 @@
           </div>
         </div>
 
-        <div id="statusBanner" class="status-banner hidden"></div>
-
         <!-- View A: Overview & Summary -->
         <div id="overviewPanel">
           <div class="card">
@@ -119,26 +129,18 @@
             <div id="overviewMetrics" class="metrics-grid"></div>
             <div id="overviewActions"></div>
           </div>
-          <details class="card advanced-details" style="margin-top:16px;">
-            <summary>Advanced: Edit Raw Plan JSON</summary>
-            <div class="section-head" style="margin-top:12px;">
-              <span class="muted">Direct JSON payload stored in SQLite and passed to ReportLab.</span>
-              <button id="saveJsonBtn" class="btn primary sm" type="button">Save JSON to DB</button>
-            </div>
-            <textarea id="jsonEditor" class="code-editor" spellcheck="false"></textarea>
-          </details>
         </div>
 
         <!-- View B: Active Skill Workspace -->
         <div id="skillPanel" class="hidden">
-          <div class="card">
+          <div id="skillHeaderCard" class="card stage-themed">
             <div class="section-head">
               <div>
                 <div id="skillStageKicker" class="kicker"></div>
                 <h2 id="skillHeading" style="margin:2px 0 4px;"></h2>
                 <p id="skillDesc" class="muted" style="margin:0;"></p>
               </div>
-              <span id="skillStatusBadge" class="pill neutral">Ready</span>
+              <span id="skillStatusBadge" class="pill hidden"></span>
             </div>
 
             <div id="skillFormContainer" style="margin-top:16px;"></div>
@@ -157,6 +159,20 @@
       </div>
     </section>
   </main>
+
+  <div id="statusBanner" class="status-toast hidden" role="status" aria-live="polite"></div>
+
+  <!-- Professional Delete Confirmation Modal -->
+  <div id="confirmModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+    <div class="modal-card">
+      <h3 id="confirmModalTitle">Delete Financial Plan?</h3>
+      <p id="confirmModalBody" class="muted"></p>
+      <div class="modal-actions">
+        <button id="confirmCancelBtn" class="btn ghost" type="button">Cancel</button>
+        <button id="confirmDeleteBtn" class="btn danger" type="button">Delete Plan</button>
+      </div>
+    </div>
+  </div>
 
   <footer class="disclaimer">
     <strong>Disclaimer:</strong> For educational and informational purposes only. This is NOT financial, investment, tax, or legal advice.

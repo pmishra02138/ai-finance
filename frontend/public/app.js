@@ -82,8 +82,6 @@ function renderPlanHeader() {
   $("overviewActions").innerHTML = actions.length
     ? `<div class="recs-block"><h4>Top Action Items</h4><ul>${actions.map((a) => `<li><strong>[${esc(a.priority || "Med")}]</strong> ${esc(a.action || "")}</li>`).join("")}</ul></div>`
     : "";
-
-  $("jsonEditor").value = JSON.stringify(p, null, 2);
 }
 
 function renderStageNav() {
@@ -94,6 +92,8 @@ function renderStageNav() {
 
   for (const stage of state.catalog.stages || []) {
     const group = document.createElement("div");
+    group.className = "stage-group";
+    group.dataset.stage = stage.id;
     const title = document.createElement("div");
     title.className = "stage-group-title";
     title.textContent = stage.title;
@@ -122,21 +122,32 @@ function openOverview() {
   renderStageNav();
 }
 
+function setSkillStatusBadge(label) {
+  const badge = $("skillStatusBadge");
+  if (!label) {
+    badge.innerHTML = "";
+    badge.classList.add("hidden");
+    return;
+  }
+  const esc = window.FinanceCharts.escapeHtml;
+  badge.innerHTML = `<span class="pill-check" aria-hidden="true">✓</span><span>${esc(label)}</span>`;
+  badge.classList.remove("hidden");
+}
+
 function openSkill(skillName) {
   const meta = (state.catalog.skills || []).find((s) => s.name === skillName);
   if (!meta) return;
   state.activeSkillName = skillName;
   $("overviewPanel").classList.add("hidden");
   $("skillPanel").classList.remove("hidden");
+  $("skillHeaderCard").dataset.stage = meta.stage_id;
 
   $("skillStageKicker").textContent = meta.stage_title;
   $("skillHeading").textContent = meta.label;
   $("skillDesc").textContent = meta.description;
 
   const saved = state.skillRuns[skillName];
-  const badge = $("skillStatusBadge");
-  badge.textContent = saved ? "Saved ✓" : "Ready";
-  badge.classList.toggle("neutral", !saved);
+  setSkillStatusBadge(saved ? "Saved" : "");
 
   const fields = window.FinanceSkills.getFields(skillName, state.activePayload, saved && saved.inputs);
   window.FinanceSkills.renderForm($("skillFormContainer"), fields);
@@ -154,7 +165,7 @@ async function executeActiveSkill(syncToPlan) {
     });
     if (!res.ok) {
       const err = await res.text();
-      showStatus(`Skill execution failed: ${err}`, true);
+      showStatus(`Unable to run calculation: ${err}`, true);
       return;
     }
     const data = await res.json();
@@ -164,12 +175,9 @@ async function executeActiveSkill(syncToPlan) {
       await refreshPlanListOnly();
       renderPlanHeader();
     }
-    const badge = $("skillStatusBadge");
-    badge.textContent = "Saved ✓";
-    badge.classList.remove("neutral");
+    setSkillStatusBadge(syncToPlan ? "Analysis complete & plan updated" : "Analysis saved");
     window.FinanceSkills.renderResult($("skillResultContainer"), data.result);
     renderStageNav();
-    showStatus(syncToPlan ? "Calculated, saved, and synced to master plan." : "Calculated and saved to skill history.");
   } catch (err) {
     showStatus(`Input or network error: ${err.message}`, true);
   }
@@ -250,10 +258,21 @@ async function loadInitialAppData() {
   openOverview();
 }
 
+function openNewPlanPrompt() {
+  $("newPlanNameInput").value = "";
+  $("newPlanRow").classList.remove("hidden");
+  $("newPlanNameInput").focus();
+}
+
+function closeNewPlanPrompt() {
+  $("newPlanRow").classList.add("hidden");
+}
+
 async function createNewPlan() {
+  const customName = $("newPlanNameInput").value.trim();
   const demoRes = await apiFetch("/demo-data");
   const demo = await demoRes.json();
-  demo.client_name = `Financial Plan (${new Date().toLocaleDateString()})`;
+  demo.client_name = customName || `Financial Plan (${new Date().toLocaleDateString()})`;
   const res = await apiFetch("/plans", {
     method: "POST",
     body: JSON.stringify({ title: demo.client_name, payload: demo }),
@@ -263,35 +282,27 @@ async function createNewPlan() {
     return;
   }
   const created = await res.json();
+  closeNewPlanPrompt();
   await refreshPlanListOnly();
   await selectPlan(created.id);
-  showStatus("Created new financial plan in SQLite.");
+  showStatus(`Created "${demo.client_name}".`);
 }
 
-async function saveJsonPlan() {
+function requestDeletePlanConfirmation() {
   if (!state.activePlanId) return;
-  try {
-    const parsed = JSON.parse($("jsonEditor").value);
-    const res = await apiFetch(`/plans/${state.activePlanId}`, {
-      method: "PUT",
-      body: JSON.stringify({ title: parsed.client_name || "Personal Financial Plan", payload: parsed }),
-    });
-    if (!res.ok) {
-      showStatus("Failed to save JSON", true);
-      return;
-    }
-    const updated = await res.json();
-    state.activePayload = updated.payload;
-    await refreshPlanListOnly();
-    renderPlanHeader();
-    showStatus("Saved master plan JSON to SQLite.");
-  } catch (err) {
-    showStatus(`Invalid JSON: ${err.message}`, true);
-  }
+  const activePlan = state.plans.find((p) => p.id === state.activePlanId);
+  const planName = (activePlan && activePlan.title) || "this financial plan";
+  $("confirmModalBody").textContent = `This will permanently delete "${planName}" and all saved analyses. This action cannot be undone.`;
+  $("confirmModal").classList.remove("hidden");
 }
 
-async function deleteActivePlan() {
+function closeDeleteModal() {
+  $("confirmModal").classList.add("hidden");
+}
+
+async function confirmDeleteActivePlan() {
   if (!state.activePlanId) return;
+  closeDeleteModal();
   const res = await apiFetch(`/plans/${state.activePlanId}`, { method: "DELETE" });
   if (!res.ok) {
     showStatus("Failed to delete plan", true);
@@ -299,7 +310,7 @@ async function deleteActivePlan() {
   }
   state.activePlanId = null;
   await loadInitialAppData();
-  showStatus("Deleted plan.");
+  showStatus("Financial plan deleted.");
 }
 
 async function fetchPdf(inline) {
@@ -313,6 +324,7 @@ async function fetchPdf(inline) {
   const url = URL.createObjectURL(blob);
   if (inline) {
     window.open(url, "_blank");
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   } else {
     const a = document.createElement("a");
     a.href = url;
@@ -396,10 +408,29 @@ async function bootstrap() {
 
   $("logoutBtn").addEventListener("click", () => handleSignOut(true));
   $("planSelect").addEventListener("change", (e) => selectPlan(Number(e.target.value)));
-  $("newPlanBtn").addEventListener("click", createNewPlan);
+  $("newPlanBtn").addEventListener("click", openNewPlanPrompt);
+  $("confirmNewPlanBtn").addEventListener("click", createNewPlan);
+  $("cancelNewPlanBtn").addEventListener("click", closeNewPlanPrompt);
+  $("newPlanNameInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      createNewPlan();
+    } else if (e.key === "Escape") {
+      closeNewPlanPrompt();
+    }
+  });
   $("overviewNavBtn").addEventListener("click", openOverview);
-  $("deletePlanBtn").addEventListener("click", deleteActivePlan);
-  $("saveJsonBtn").addEventListener("click", saveJsonPlan);
+  $("deletePlanBtn").addEventListener("click", requestDeletePlanConfirmation);
+  $("confirmCancelBtn").addEventListener("click", closeDeleteModal);
+  $("confirmDeleteBtn").addEventListener("click", confirmDeleteActivePlan);
+  $("confirmModal").addEventListener("click", (e) => {
+    if (e.target === $("confirmModal")) closeDeleteModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !$("confirmModal").classList.contains("hidden")) {
+      closeDeleteModal();
+    }
+  });
   $("runSkillBtn").addEventListener("click", () => executeActiveSkill(false));
   $("runAndSyncBtn").addEventListener("click", () => executeActiveSkill(true));
   $("previewPdfBtn").addEventListener("click", () => fetchPdf(true));

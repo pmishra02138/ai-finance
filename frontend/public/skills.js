@@ -63,16 +63,12 @@ window.FinanceSkills = (function () {
       { key: "extra_monthly_payment", label: "Extra Monthly Payment Toward Debt ($)", type: "number", value: 400 },
       {
         key: "accounts",
-        label: "Debt Accounts (JSON Array)",
-        type: "json",
-        value: JSON.stringify(
-          plan?.debt?.accounts || [
-            { name: "Credit Card", balance: 8400, apr: 22.0, min_payment: 220 },
-            { name: "Student Loan", balance: 18600, apr: 6.2, min_payment: 210 },
-          ],
-          null,
-          2
-        ),
+        label: "Your Debt Accounts",
+        type: "debt_list",
+        value: plan?.debt?.accounts || [
+          { name: "Credit Card", balance: 8400, apr: 22.0, min_payment: 220 },
+          { name: "Student Loan", balance: 18600, apr: 6.2, min_payment: 210 },
+        ],
       },
     ],
     "finance-portfolio": (plan) => [
@@ -102,6 +98,7 @@ window.FinanceSkills = (function () {
       { key: "investment_amount", label: "Amount to Allocate ($)", type: "number", value: 25000 },
     ],
     "finance-taxes": (plan) => [
+      { key: "age", label: "Current Age (50+ catch-up)", type: "number", value: plan?.retirement?.current_age ?? 38 },
       { key: "gross_annual_income", label: "Gross Annual Income ($)", type: "number", value: (plan?.cash_flow?.monthly_income ?? 9200) * 12 },
       { key: "marginal_tax_rate", label: "Marginal Federal Tax Bracket (%)", type: "number", value: 24 },
       { key: "current_401k", label: "Current Annual 401(k) Contribution ($)", type: "number", value: 11000 },
@@ -169,9 +166,21 @@ window.FinanceSkills = (function () {
     });
   }
 
+  function renderDebtRow(acc = {}) {
+    return `
+      <div class="debt-row">
+        <input type="text" class="debt-name" placeholder="Account name (e.g. Visa)" value="${esc(acc.name || "")}" />
+        <input type="number" class="debt-balance" placeholder="Balance ($)" min="0" value="${esc(acc.balance ?? 0)}" />
+        <input type="number" class="debt-apr" placeholder="APR (%)" min="0" step="0.1" value="${esc(acc.apr ?? 0)}" />
+        <input type="number" class="debt-min" placeholder="Min Pmt ($)" min="0" value="${esc(acc.min_payment ?? 0)}" />
+        <button type="button" class="btn ghost-danger sm remove-debt-btn" title="Remove account">Remove</button>
+      </div>
+    `;
+  }
+
   function renderForm(container, fields) {
     if (!fields.length) {
-      container.innerHTML = `<p class="muted">This module uses your active synced financial plan directly. Click <strong>Run &amp; Validate</strong> or export your 9-page PDF below.</p>`;
+      container.innerHTML = `<p class="muted">This module uses your active synced financial plan directly. Click <strong>Run &amp; Sync to Plan</strong> or export your 9-page PDF below.</p>`;
       return;
     }
     const html = fields
@@ -186,6 +195,22 @@ window.FinanceSkills = (function () {
         if (f.type === "checkbox") {
           return `<label class="checkbox-label"><input id="${id}" data-key="${esc(f.key)}" data-type="checkbox" type="checkbox" ${f.value ? "checked" : ""}/><span>${esc(f.label)}</span></label>`;
         }
+        if (f.type === "debt_list") {
+          const list = Array.isArray(f.value) ? f.value : [];
+          const rowsHtml = list.map((acc) => renderDebtRow(acc)).join("");
+          return `
+            <div class="full-span debt-editor" data-key="${esc(f.key)}" data-type="debt_list">
+              <div class="debt-editor-head">
+                <span class="debt-editor-label">${esc(f.label)}</span>
+                <button type="button" class="btn ghost sm add-debt-btn">+ Add Debt Account</button>
+              </div>
+              <div class="debt-cols-head">
+                <span>Account Name</span><span>Balance ($)</span><span>APR (%)</span><span>Min Payment ($)</span><span></span>
+              </div>
+              <div class="debt-rows">${rowsHtml}</div>
+            </div>
+          `;
+        }
         if (f.type === "json") {
           return `<label class="full-span">${esc(f.label)}<textarea id="${id}" data-key="${esc(f.key)}" data-type="json" class="code-editor sm" spellcheck="false">${esc(f.value)}</textarea></label>`;
         }
@@ -194,6 +219,18 @@ window.FinanceSkills = (function () {
       })
       .join("");
     container.innerHTML = `<div class="form-grid">${html}</div>`;
+
+    container.querySelectorAll(".add-debt-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const rows = btn.closest(".debt-editor").querySelector(".debt-rows");
+        rows.insertAdjacentHTML("beforeend", renderDebtRow({ name: "", balance: 0, apr: 0, min_payment: 0 }));
+      });
+    });
+    container.addEventListener("click", (e) => {
+      if (e.target.classList.contains("remove-debt-btn")) {
+        e.target.closest(".debt-row").remove();
+      }
+    });
   }
 
   function readForm(container) {
@@ -205,6 +242,18 @@ window.FinanceSkills = (function () {
         out[key] = el.checked;
       } else if (type === "number") {
         out[key] = el.value === "" ? 0 : Number(el.value);
+      } else if (type === "debt_list") {
+        const accounts = [];
+        el.querySelectorAll(".debt-row").forEach((row) => {
+          const name = row.querySelector(".debt-name").value.trim();
+          const balance = Number(row.querySelector(".debt-balance").value || 0);
+          const apr = Number(row.querySelector(".debt-apr").value || 0);
+          const min_payment = Number(row.querySelector(".debt-min").value || 0);
+          if (name || balance > 0) {
+            accounts.push({ name: name || "Debt Account", balance, apr, min_payment });
+          }
+        });
+        out[key] = accounts;
       } else if (type === "json") {
         out[key] = JSON.parse(el.value);
       } else {
