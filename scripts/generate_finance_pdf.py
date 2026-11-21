@@ -962,26 +962,26 @@ def build_90_day_plan(story: List[Any], styles: Dict[str, ParagraphStyle], data:
 # ---------------------------------------------------------------------------
 def _demo_data() -> Dict[str, Any]:
     return {
-        "client_name": "Sample Client — Jordan Rivera",
+        "client_name": "Sample Financial Plan",
         "as_of": datetime.now().strftime("%B %d, %Y"),
         "health_score": 68,
         "grade": "B-",
         "signal": "Healthy — Minor Tune-Up",
         "executive_summary": (
-            "Jordan, age 38, has a solid foundation: positive cash flow, retirement contributions in place, "
+            "This sample household (age 38) has a solid foundation: positive cash flow, retirement contributions in place, "
             "and term life insurance. The biggest leverage points are accelerating credit card payoff "
             "(saving ~$4,800 in interest) and raising the 401(k) deferral from 8% to 12% to close the "
             "retirement gap by age 65. Estate documents are missing — a critical fix."
         ),
         "categories": {
             "cash_flow": 78,
-            "debt": 52,
-            "investments": 71,
-            "retirement": 64,
-            "protection": 58,
+            "debt": 55,
+            "investments": 75,
+            "retirement": 70,
+            "protection": 62,
         },
         "category_notes": {
-            "cash_flow": "21% savings rate is above average. Housing at 28% of income is healthy.",
+            "cash_flow": "22% savings rate is above average. Housing at 28% of income is healthy.",
             "debt": "Credit card balance at 22% APR is dragging the score. Avalanche payoff in 14 months.",
             "investments": "Equity-heavy allocation suits age 38. Slight overweight in US large-cap.",
             "retirement": "On track for ~85% of target at age 65. Boosting contributions closes the gap.",
@@ -999,7 +999,7 @@ def _demo_data() -> Dict[str, Any]:
                 ("Subscriptions", 95),
                 ("Personal / shopping", 380),
                 ("Childcare / education", 620),
-                ("Debt payments (min)", 360),
+                ("Debt payments (min)", 810),
                 ("Misc / buffer", 200),
             ],
             "commentary": (

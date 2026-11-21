@@ -323,6 +323,7 @@ def calc_budget(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
     if not recs:
         recs.append("Budget meets or exceeds the 50/30/20 benchmark.")
 
+    existing_expenses = cf.get("expenses") or []
     return {
         "skill": "finance-budget",
         "score": round(score, 1),
@@ -360,7 +361,8 @@ def calc_budget(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
             "cash_flow": {
                 **cf,
                 "monthly_income": income,
-                "expenses": [("Essential Needs", needs), ("Discretionary Wants", wants)],
+                "expenses": existing_expenses if existing_expenses else [("Essential Needs", needs), ("Discretionary Wants", wants)],
+                "budget_50_30_20": {"needs": needs, "wants": wants, "savings": surplus},
                 "commentary": recs[0],
             },
         },
@@ -530,6 +532,8 @@ def calc_portfolio(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, An
     bonds = _f(inputs.get("bonds_pct"), 18)
     reits = _f(inputs.get("reits_pct"), 6)
     cash = _f(inputs.get("cash_pct"), 4)
+    total_pct = us_stocks + intl_stocks + bonds + reits + cash
+    alloc_valid = abs(total_pct - 100.0) <= 0.5
 
     target_equity = _clamp(110 - age, 30, 90)
     target_us = round(target_equity * 0.70, 1)
@@ -547,7 +551,8 @@ def calc_portfolio(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, An
     ]
     max_drift = max(abs(a["pct"] - a["target_pct"]) for a in alloc)
     annual_fee = total_value * (expense_ratio / 100.0)
-    score = _clamp(95.0 - max_drift * 1.8 - max(0.0, (expense_ratio - 0.10) * 60.0))
+    sum_penalty = 0.0 if alloc_valid else min(20.0, abs(total_pct - 100.0) * 0.5)
+    score = _clamp(95.0 - max_drift * 1.8 - max(0.0, (expense_ratio - 0.10) * 60.0) - sum_penalty)
 
     rows = []
     for a in alloc:
@@ -556,13 +561,24 @@ def calc_portfolio(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, An
         action = f"Buy {_money(trade)}" if trade > 50 else (f"Trim {_money(-trade)}" if trade < -50 else "On target")
         rows.append([a["name"], _pct(a["pct"]), _pct(a["target_pct"]), f"{'+' if diff >= 0 else ''}{diff:.1f}%", action])
 
+    recs = [
+        "Rebalance any asset class drifting >5 percentage points from target using new contributions first to avoid capital gains.",
+        "Target weighted expense ratio <=0.10% using broad index ETFs.",
+    ]
+    if not alloc_valid:
+        recs.insert(0, f"Allocation inputs sum to {total_pct:.1f}% instead of 100.0% — adjust weights so rebalancing trades balance.")
+
     return {
         "skill": "finance-portfolio",
         "score": round(score, 1),
         "grade": score_grade(score),
-        "summary": f"Portfolio {_money(total_value)} — max drift {max_drift:.1f}pp, weighted ER {_pct(expense_ratio, 2)} ({_money(annual_fee)}/yr).",
+        "summary": (
+            f"Portfolio {_money(total_value)} — max drift {max_drift:.1f}pp, weighted ER {_pct(expense_ratio, 2)} ({_money(annual_fee)}/yr)."
+            + ("" if alloc_valid else f" Warning: weights sum to {total_pct:.1f}% (expected 100%).")
+        ),
         "metrics": [
             {"label": "Portfolio Value", "value": _money(total_value), "tone": "neutral"},
+            {"label": "Allocation Sum", "value": _pct(total_pct), "tone": "good" if alloc_valid else "bad"},
             {"label": "Max Drift", "value": f"{max_drift:.1f} pp", "tone": "good" if max_drift <= 5 else "warn"},
             {"label": "Avg Expense Ratio", "value": _pct(expense_ratio, 2), "tone": "good" if expense_ratio <= 0.15 else "bad"},
             {"label": "Annual Fee Drag", "value": _money(annual_fee), "tone": "good" if expense_ratio <= 0.15 else "warn"},
@@ -573,10 +589,7 @@ def calc_portfolio(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, An
             "title": "Current Asset Allocation (%)",
             "items": [{"label": a["name"], "value": a["pct"]} for a in alloc if a["pct"] > 0],
         },
-        "recommendations": [
-            "Rebalance any asset class drifting >5 percentage points from target using new contributions first to avoid capital gains.",
-            "Target weighted expense ratio <=0.10% using broad index ETFs.",
-        ],
+        "recommendations": recs,
         "plan_patch": {
             "categories": {**(plan.get("categories") or {}), "investments": round(score, 1)},
             "investments": {"total_value": total_value, "allocation": alloc},
@@ -674,6 +687,8 @@ def calc_screen(inputs: Dict[str, Any], _plan: Dict[str, Any]) -> Dict[str, Any]
 
 def calc_taxes(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
     cf = plan.get("cash_flow") or {}
+    ret = plan.get("retirement") or {}
+    age = int(_f(inputs.get("age"), _f(ret.get("current_age"), 38)))
     gross_income = _f(inputs.get("gross_annual_income"), _f(cf.get("monthly_income"), 9200) * 12.0)
     marginal_rate = _f(inputs.get("marginal_tax_rate"), 24.0) / 100.0
     cur_401k = _f(inputs.get("current_401k"), 11000)
@@ -683,9 +698,9 @@ def calc_taxes(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
     family_hsa = bool(inputs.get("family_hsa", False))
     harvestable_losses = _f(inputs.get("harvestable_losses"), 0)
 
-    limit_401k = 23500.0
-    limit_hsa = (8550.0 if family_hsa else 4300.0) if hsa_eligible else 0.0
-    limit_ira = 7000.0
+    limit_401k = 23500.0 + (7500.0 if age >= 50 else 0.0)
+    limit_hsa = ((8550.0 if family_hsa else 4300.0) + (1000.0 if age >= 55 else 0.0)) if hsa_eligible else 0.0
+    limit_ira = 7000.0 + (1000.0 if age >= 50 else 0.0)
 
     rem_401k = max(0.0, limit_401k - cur_401k)
     rem_hsa = max(0.0, limit_hsa - cur_hsa)
