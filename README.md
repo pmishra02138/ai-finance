@@ -1,6 +1,6 @@
 ![AI Personal Finance Advisor](.github/banner.svg)
 
-# AI Personal Finance Advisor (`ai-finance`)
+# AI Personal Finance Advisor
 
 > **Full-Stack Personal Financial Planning Web App, Deterministic Calculation Engine, SQLite Persistence, and 9-Page PDF Report Generator.**
 
