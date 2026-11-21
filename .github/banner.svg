@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 250" width="900" height="250" role="img" aria-label="AI Personal Finance Advisor">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 225" width="900" height="225" role="img" aria-label="AI Personal Finance Advisor">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#0c1220"/>
@@ -12,14 +12,13 @@
       .title { font-family: 'Helvetica Neue', Arial, sans-serif; font-weight: 800; font-size: 36px; letter-spacing: 1px; fill: #e8a838; }
       .subtitle { font-family: 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-size: 26px; letter-spacing: 2px; fill: #2d8a4e; }
       .tagline { font-family: 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 14px; fill: #b8c5d6; letter-spacing: 0.3px; }
-      .badge { font-family: 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-size: 11px; fill: #0c1220; letter-spacing: 0.5px; }
       .feature { font-family: 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 13px; fill: #e8eef7; }
       .footer { font-family: 'Helvetica Neue', Arial, sans-serif; font-weight: 500; font-size: 11px; fill: #8aa0bf; letter-spacing: 0.4px; }
     </style>
   </defs>
 
   <!-- Background -->
-  <rect width="900" height="250" fill="url(#bg)"/>
+  <rect width="900" height="225" fill="url(#bg)"/>
 
   <!-- Subtle grid lines -->
   <g opacity="0.05" stroke="#4a9eff" stroke-width="1">
@@ -28,25 +27,13 @@
   </g>
 
   <!-- LEFT COLUMN -->
-  <rect x="32" y="34" width="5" height="120" rx="2.5" fill="url(#goldBar)"/>
-  <text x="54" y="68" class="title">AI PERSONAL FINANCE</text>
-  <text x="54" y="100" class="subtitle">ADVISOR</text>
-  <text x="54" y="128" class="tagline">Unified Financial Planning Web App &amp; 9-Page PDF Engine</text>
-
-  <!-- Stat badges -->
-  <g>
-    <rect x="54" y="152" width="124" height="26" rx="13" fill="#e8a838"/>
-    <text x="116" y="169" class="badge" text-anchor="middle">5-STAGE PLANNER</text>
-
-    <rect x="186" y="152" width="114" height="26" rx="13" fill="#2d8a4e"/>
-    <text x="243" y="169" class="badge" text-anchor="middle" fill="#ffffff">FASTAPI + SQLITE</text>
-
-    <rect x="308" y="152" width="112" height="26" rx="13" fill="#4a9eff"/>
-    <text x="364" y="169" class="badge" text-anchor="middle" fill="#0c1220">LOCAL &amp; DOCKER</text>
-  </g>
+  <rect x="32" y="40" width="5" height="114" rx="2.5" fill="url(#goldBar)"/>
+  <text x="54" y="76" class="title">AI PERSONAL FINANCE</text>
+  <text x="54" y="108" class="subtitle">ADVISOR</text>
+  <text x="54" y="140" class="tagline">Unified 5-Stage Financial Planner &amp; 9-Page PDF Engine</text>
 
   <!-- RIGHT COLUMN: feature checklist -->
-  <g transform="translate(620, 44)">
+  <g transform="translate(620, 36)">
     <text x="105" y="0" class="feature" font-weight="700" fill="#e8a838" font-size="13" letter-spacing="0.8" text-anchor="middle">WHAT IT COVERS</text>
 
     <g transform="translate(0, 26)">
@@ -72,6 +59,6 @@
   </g>
 
   <!-- Bottom bar: life stages -->
-  <rect x="0" y="220" width="900" height="30" fill="#070b14"/>
-  <text x="450" y="240" class="footer" text-anchor="middle">EARLY CAREER  •  FAMILY PLANNING  •  WEALTH BUILDING  •  PRE-RETIREMENT  •  RETIREMENT  •  LEGACY</text>
+  <rect x="0" y="195" width="900" height="30" fill="#070b14"/>
+  <text x="450" y="215" class="footer" text-anchor="middle">EARLY CAREER  •  FAMILY PLANNING  •  WEALTH BUILDING  •  PRE-RETIREMENT  •  RETIREMENT  •  LEGACY</text>
 </svg>
