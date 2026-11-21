@@ -101,7 +101,7 @@
     <text x="272" y="45" class="cmd">5. Health Score &amp; PDF Export</text>
 
     <rect x="524" y="30" width="268" height="22" rx="4" fill="#142036" stroke="#2a3a55"/>
-    <text x="534" y="45" class="cmd">./bin/start.sh  &#8594;  :8787</text>
+    <text x="534" y="45" class="cmd">Side-by-Side Scenario Compare</text>
   </g>
 
   <!-- Bottom bar: life stages -->
