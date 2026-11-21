@@ -1,23 +1,31 @@
 #!/usr/bin/env python3
 """
-FastAPI backend server for AI Personal Finance Advisor.
+Unified FastAPI server for AI Personal Finance Advisor (Single-Port Architecture).
+
+Serves both:
+  - Static frontend UI from frontend/public/ (GET /, /styles.css, /app.js, ...)
+  - REST API under /api/* (and /health, /docs)
 
 Endpoints:
-  GET    /               -> Service overview & available endpoints
-  GET    /health         -> {"status": "ok", "service": "ai-finance", "db": "ok"}
-  POST   /auth/login     -> Authenticate with username/password (default: user/password)
-  POST   /auth/logout    -> Revoke bearer session token
-  GET    /auth/me        -> Return authenticated user info
-  GET    /plans          -> List authenticated user's saved financial plans
-  POST   /plans          -> Create a new financial plan in SQLite
-  GET    /plans/{id}     -> Fetch a single saved plan
-  PUT    /plans/{id}     -> Update an existing saved plan
-  DELETE /plans/{id}     -> Delete a saved plan
-  GET    /plans/{id}/pdf -> Generate PDF for a saved plan
-  GET    /demo-data      -> Return sample financial plan JSON payload
-  GET    /demo           -> Generate and return FINANCE-PLAN-sample.pdf
-  POST   /generate       -> Generate PDF from posted JSON payload
-  GET    /docs           -> Interactive Swagger UI
+  GET    /                       -> Frontend SPA (index.html)
+  GET    /health | /api/health   -> {"status": "ok", "service": "ai-finance", "db": "ok"}
+  POST   /api/auth/login         -> Authenticate (default: user / password)
+  POST   /api/auth/register      -> Create new user account
+  POST   /api/auth/logout        -> Revoke bearer session token
+  GET    /api/auth/me            -> Return authenticated user info
+  GET    /api/skills             -> List 5-stage 14-skill catalog
+  GET    /api/plans              -> List user's saved financial plans
+  POST   /api/plans              -> Create a new financial plan
+  GET    /api/plans/{id}         -> Fetch a single plan
+  PUT    /api/plans/{id}         -> Update a plan
+  DELETE /api/plans/{id}         -> Delete a plan
+  GET    /api/plans/{id}/pdf     -> Generate PDF for a saved plan
+  GET    /api/plans/{id}/skills  -> List saved skill runs for a plan
+  POST   /api/plans/{id}/skills/{name}/run -> Run calculator & optionally sync to plan
+  GET    /api/demo-data          -> Return sample plan JSON
+  GET    /api/demo               -> Generate sample PDF
+  POST   /api/generate           -> Generate PDF from posted JSON
+  GET    /api/docs               -> Interactive Swagger UI
 """
 
 from __future__ import annotations
@@ -26,13 +34,17 @@ import argparse
 import os
 import sys
 import tempfile
+import threading
+import time
+from collections import defaultdict, deque
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List, Optional
+from pathlib import Path
+from typing import Any, Deque, Dict, List, Optional
 
 import uvicorn
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -44,6 +56,9 @@ from calculators import run_skill
 from generate_finance_pdf import _demo_data, build_pdf, score_grade, score_signal
 from skill_registry import VALID_SKILL_NAMES, get_skills_catalog
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
+STATIC_DIR = Path(os.environ.get("STATIC_DIR") or (REPO_ROOT / "frontend" / "public")).resolve()
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -53,18 +68,42 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(
     title="AI Personal Finance Advisor API",
-    description="FastAPI + SQLite + ReportLab backend for the unified AI Personal Finance Advisor app.",
-    version="2.0.0",
+    description="Unified single-port FastAPI + SQLite + ReportLab application.",
+    version="2.1.0",
     lifespan=lifespan,
+    docs_url="/api/docs",
+    openapi_url="/api/openapi.json",
 )
 
+cors_origins = [
+    o.strip()
+    for o in os.environ.get("CORS_ORIGINS", "http://localhost:8787,http://127.0.0.1:8787").split(",")
+    if o.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+_AUTH_RATE_LOCK = threading.Lock()
+_AUTH_ATTEMPTS: Dict[str, Deque[float]] = defaultdict(deque)
+AUTH_RATE_LIMIT = 30
+AUTH_RATE_WINDOW_SEC = 60.0
+
+
+def _check_auth_rate_limit(request: Request) -> None:
+    ip = (request.client.host if request.client else None) or "unknown"
+    now = time.monotonic()
+    with _AUTH_RATE_LOCK:
+        dq = _AUTH_ATTEMPTS[ip]
+        while dq and now - dq[0] > AUTH_RATE_WINDOW_SEC:
+            dq.popleft()
+        if len(dq) >= AUTH_RATE_LIMIT:
+            raise HTTPException(status_code=429, detail="Too many authentication attempts. Please wait and retry.")
+        dq.append(now)
 
 
 class LoginRequest(BaseModel):
@@ -131,40 +170,19 @@ def _normalize_plan_meta(title: Optional[str], payload: Dict[str, Any]) -> tuple
     return resolved_title, score, grade, data
 
 
-@app.get("/")
-def root(request: Request) -> Any:
-    accept = request.headers.get("accept", "")
-    if "text/html" in accept.lower():
-        host = request.url.hostname or "127.0.0.1"
-        return RedirectResponse(url=f"http://{host}:3000", status_code=307)
-    return {
-        "service": "ai-finance",
-        "status": "ok",
-        "frontend_url": "http://localhost:3000",
-        "docs_url": "/docs",
-        "endpoints": [
-            "/health",
-            "/auth/login",
-            "/auth/me",
-            "/auth/logout",
-            "/plans",
-            "/skills",
-            "/demo",
-            "/demo-data",
-            "/generate",
-            "/docs",
-        ],
-    }
+api = APIRouter(prefix="/api")
 
 
 @app.get("/health")
+@api.get("/health")
 def health() -> Dict[str, str]:
     finance_db.init_db(seed_demo_payload=_demo_data())
     return {"status": "ok", "service": "ai-finance", "db": "ok"}
 
 
-@app.post("/auth/login")
-def login(body: LoginRequest) -> Dict[str, Any]:
+@api.post("/auth/login")
+def login(body: LoginRequest, request: Request) -> Dict[str, Any]:
+    _check_auth_rate_limit(request)
     finance_db.init_db(seed_demo_payload=_demo_data())
     result = finance_db.authenticate_user(body.username, body.password)
     if result is None:
@@ -172,8 +190,9 @@ def login(body: LoginRequest) -> Dict[str, Any]:
     return result
 
 
-@app.post("/auth/register", status_code=201)
-def register(body: LoginRequest) -> Dict[str, Any]:
+@api.post("/auth/register", status_code=201)
+def register(body: LoginRequest, request: Request) -> Dict[str, Any]:
+    _check_auth_rate_limit(request)
     finance_db.init_db(seed_demo_payload=_demo_data())
     try:
         return finance_db.register_user(body.username, body.password, seed_demo_payload=_demo_data())
@@ -183,24 +202,29 @@ def register(body: LoginRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.post("/auth/logout")
+@api.post("/auth/logout")
 def logout(authorization: Optional[str] = Header(default=None)) -> Dict[str, str]:
     token = _extract_bearer(authorization)
     finance_db.revoke_token(token)
     return {"status": "logged_out"}
 
 
-@app.get("/auth/me")
+@api.get("/auth/me")
 def me(user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, Any]:
     return user
 
 
-@app.get("/plans")
+@api.get("/skills")
+def list_skills() -> Dict[str, Any]:
+    return get_skills_catalog()
+
+
+@api.get("/plans")
 def list_user_plans(user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, List[Dict[str, Any]]]:
     return {"plans": finance_db.list_plans(user["id"])}
 
 
-@app.post("/plans", status_code=201)
+@api.post("/plans", status_code=201)
 def create_user_plan(
     body: PlanUpsertRequest,
     user: Dict[str, Any] = Depends(get_current_user),
@@ -209,7 +233,7 @@ def create_user_plan(
     return finance_db.create_plan(user["id"], title, score, grade, normalized)
 
 
-@app.get("/plans/{plan_id}")
+@api.get("/plans/{plan_id}")
 def get_user_plan(plan_id: int, user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, Any]:
     plan = finance_db.get_plan(user["id"], plan_id)
     if plan is None:
@@ -217,7 +241,7 @@ def get_user_plan(plan_id: int, user: Dict[str, Any] = Depends(get_current_user)
     return plan
 
 
-@app.put("/plans/{plan_id}")
+@api.put("/plans/{plan_id}")
 def update_user_plan(
     plan_id: int,
     body: PlanUpsertRequest,
@@ -230,7 +254,7 @@ def update_user_plan(
     return updated
 
 
-@app.delete("/plans/{plan_id}")
+@api.delete("/plans/{plan_id}")
 def delete_user_plan(plan_id: int, user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, str]:
     deleted = finance_db.delete_plan(user["id"], plan_id)
     if not deleted:
@@ -238,7 +262,7 @@ def delete_user_plan(plan_id: int, user: Dict[str, Any] = Depends(get_current_us
     return {"status": "deleted"}
 
 
-@app.get("/plans/{plan_id}/pdf")
+@api.get("/plans/{plan_id}/pdf")
 def get_user_plan_pdf(
     plan_id: int,
     inline: bool = Query(False),
@@ -259,12 +283,7 @@ def get_user_plan_pdf(
     )
 
 
-@app.get("/skills")
-def list_skills() -> Dict[str, Any]:
-    return get_skills_catalog()
-
-
-@app.get("/plans/{plan_id}/skills")
+@api.get("/plans/{plan_id}/skills")
 def get_plan_skill_runs(
     plan_id: int,
     user: Dict[str, Any] = Depends(get_current_user),
@@ -276,7 +295,7 @@ def get_plan_skill_runs(
     return {"plan_id": plan_id, "runs": runs, "completed_skills": [r["skill_name"] for r in runs]}
 
 
-@app.post("/plans/{plan_id}/skills/{skill_name}/run")
+@api.post("/plans/{plan_id}/skills/{skill_name}/run")
 def run_plan_skill(
     plan_id: int,
     skill_name: str,
@@ -301,24 +320,29 @@ def run_plan_skill(
 
     updated_plan = None
     if body.sync_to_plan and result.get("plan_patch"):
+        patch = result["plan_patch"]
         merged = dict(plan["payload"])
-        for k, v in result["plan_patch"].items():
+        for k, v in patch.items():
             if isinstance(v, dict) and isinstance(merged.get(k), dict):
                 merged[k] = {**merged[k], **v}
             else:
                 merged[k] = v
+        if "categories" in patch and "health_score" not in patch:
+            merged.pop("health_score", None)
+            merged.pop("grade", None)
+            merged.pop("signal", None)
         title, score, grade, normalized = _normalize_plan_meta(plan["title"], merged)
         updated_plan = finance_db.update_plan(user["id"], plan_id, title, score, grade, normalized)
 
     return {"run": saved_run, "result": result, "updated_plan": updated_plan}
 
 
-@app.get("/demo-data")
+@api.get("/demo-data")
 def demo_data() -> Dict[str, Any]:
     return _demo_data()
 
 
-@app.get("/demo")
+@api.get("/demo")
 def demo_pdf(inline: bool = Query(False)) -> Response:
     try:
         pdf_bytes = _render_pdf_bytes(_demo_data())
@@ -332,7 +356,7 @@ def demo_pdf(inline: bool = Query(False)) -> Response:
     )
 
 
-@app.post("/generate")
+@api.post("/generate")
 def generate_pdf(payload: Dict[str, Any]) -> Response:
     try:
         pdf_bytes = _render_pdf_bytes(payload)
@@ -345,8 +369,35 @@ def generate_pdf(payload: Dict[str, Any]) -> Response:
     )
 
 
+app.include_router(api)
+
+
+@app.get("/{full_path:path}")
+def serve_frontend(full_path: str) -> Response:
+    """Serve static frontend assets and SPA fallback on the same single port."""
+    if full_path.startswith("api/") or full_path == "api":
+        return JSONResponse(status_code=404, content={"detail": "Not Found"})
+
+    rel = full_path.lstrip("/") or "index.html"
+    candidate = (STATIC_DIR / rel).resolve()
+    try:
+        candidate.relative_to(STATIC_DIR)
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    if candidate.is_file():
+        return FileResponse(candidate)
+    if "." in Path(rel).name:
+        return JSONResponse(status_code=404, content={"detail": "Not Found"})
+
+    index_file = STATIC_DIR / "index.html"
+    if index_file.is_file():
+        return FileResponse(index_file)
+    return JSONResponse(status_code=404, content={"detail": "Frontend assets not found"})
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run FastAPI localhost backend server.")
+    parser = argparse.ArgumentParser(description="Run unified single-port FastAPI server.")
     parser.add_argument("--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1).")
     parser.add_argument("--port", type=int, default=8787, help="Port to listen on (default: 8787).")
     args = parser.parse_args()
