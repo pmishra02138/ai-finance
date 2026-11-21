@@ -153,4 +153,4 @@ This tool is provided for informational and educational purposes only. The Finan
 
 ## 🙏 Acknowledgments
 
-Originally inspired by / based on [zubair-trabzada/ai-finance-claude](https://github.com/zubair-trabzada/ai-finance-claude).
+Originally based on [zubair-trabzada/ai-finance-claude](https://github.com/zubair-trabzada/ai-finance-claude).
