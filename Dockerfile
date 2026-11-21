@@ -14,9 +14,20 @@ RUN uv sync --no-install-project --no-dev
 COPY scripts/ ./scripts/
 COPY finance/ ./finance/
 COPY skills/ ./skills/
+COPY frontend/public/ ./frontend/public/
 
-RUN mkdir -p /data
+RUN useradd --create-home --uid 1000 aifinance && \
+    mkdir -p /app/data /data && \
+    chown -R aifinance:aifinance /app /data
+
+USER aifinance
+
+ENV STATIC_DIR=/app/frontend/public \
+    AI_FINANCE_DB_PATH=/app/data/ai_finance.db
 
 EXPOSE 8787
+
+HEALTHCHECK --interval=10s --timeout=3s --start-period=5s \
+    CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:8787/api/health')"
 
 CMD ["uv", "run", "--no-sync", "uvicorn", "scripts.server:app", "--host", "0.0.0.0", "--port", "8787"]

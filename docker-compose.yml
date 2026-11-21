@@ -1,7 +1,7 @@
 services:
-  api:
+  app:
     build: .
-    container_name: ai-finance-api
+    container_name: ai-finance
     ports:
       - "127.0.0.1:8787:8787"
     volumes:
@@ -9,19 +9,6 @@ services:
       - ./output:/data
     environment:
       - AI_FINANCE_DB_PATH=/app/data/ai_finance.db
-    restart: unless-stopped
-
-  frontend:
-    build: ./frontend
-    container_name: ai-finance-frontend
-    ports:
-      - "127.0.0.1:3000:3000"
-    environment:
-      - HOST=0.0.0.0
-      - PORT=3000
-      - BACKEND_URL=http://api:8787
-    depends_on:
-      - api
     restart: unless-stopped
 
   cli:

@@ -239,14 +239,14 @@ install_docker_localhost() {
   mkdir -p "${SOURCE_DIR}/output" "${SOURCE_DIR}/data"
   (
     cd "$SOURCE_DIR"
-    docker compose up -d --build
+    docker compose up -d --build app
   )
-  ok "Docker stack running: Web UI at http://localhost:3000 (API at http://localhost:8787)"
+  ok "Docker container running at http://localhost:8787"
   echo ""
   echo -e "${BOLD}${CYAN}Localhost endpoints:${NC}"
-  echo -e "  ${GREEN}•${NC} Web UI:   http://localhost:3000  (default login: user / password)"
-  echo -e "  ${GREEN}•${NC} API Docs: http://localhost:8787/docs"
-  echo -e "  ${GREEN}•${NC} Health:   curl http://localhost:8787/health"
+  echo -e "  ${GREEN}•${NC} Web UI:   http://localhost:8787  (default login: user / password)"
+  echo -e "  ${GREEN}•${NC} API Docs: http://localhost:8787/api/docs"
+  echo -e "  ${GREEN}•${NC} Health:   curl http://localhost:8787/api/health"
   echo ""
 }
 
