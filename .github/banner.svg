@@ -38,25 +38,24 @@
   <text x="54" y="100" class="subtitle">ADVISOR</text>
 
   <!-- Tagline -->
-  <text x="54" y="128" class="tagline">AI-Powered Financial Planning &amp; Analysis</text>
+  <text x="54" y="128" class="tagline">Unified Financial Planning Web App &amp; 9-Page PDF Engine</text>
 
   <!-- Stat badges -->
   <g>
-    <rect x="54" y="150" width="92" height="26" rx="13" fill="#e8a838"/>
-    <text x="100" y="167" class="badge" text-anchor="middle">14 SKILLS</text>
+    <rect x="54" y="150" width="124" height="26" rx="13" fill="#e8a838"/>
+    <text x="116" y="167" class="badge" text-anchor="middle">5-STAGE PLANNER</text>
 
-    <rect x="154" y="150" width="92" height="26" rx="13" fill="#2d8a4e"/>
-    <text x="200" y="167" class="badge" text-anchor="middle" fill="#ffffff">5 AGENTS</text>
+    <rect x="186" y="150" width="114" height="26" rx="13" fill="#2d8a4e"/>
+    <text x="243" y="167" class="badge" text-anchor="middle" fill="#ffffff">FASTAPI + SQLITE</text>
 
-    <rect x="254" y="150" width="108" height="26" rx="13" fill="#4a9eff"/>
-    <text x="308" y="167" class="badge" text-anchor="middle" fill="#0c1220">PDF REPORTS</text>
+    <rect x="308" y="150" width="112" height="26" rx="13" fill="#4a9eff"/>
+    <text x="364" y="167" class="badge" text-anchor="middle" fill="#0c1220">LOCAL &amp; DOCKER</text>
   </g>
 
   <!-- RIGHT COLUMN: feature checklist -->
   <g transform="translate(620, 50)">
-    <text x="120" y="0" class="feature" font-weight="700" fill="#e8a838" font-size="13" letter-spacing="0.8" text-anchor="middle">WHAT IT COVERS</text>
+    <text x="105" y="0" class="feature" font-weight="700" fill="#e8a838" font-size="13" letter-spacing="0.8" text-anchor="middle">WHAT IT COVERS</text>
 
-    <!-- 6 bullets -->
     <g transform="translate(0, 28)">
       <circle cx="6" cy="6" r="4" fill="#e8a838"/>
       <text x="20" y="10" class="feature">Cash Flow &amp; Budgeting</text>
@@ -67,42 +66,42 @@
     </g>
     <g transform="translate(0, 76)">
       <circle cx="6" cy="6" r="4" fill="#e8a838"/>
-      <text x="20" y="10" class="feature">Retirement Planning</text>
+      <text x="20" y="10" class="feature">Retirement &amp; FIRE</text>
     </g>
     <g transform="translate(0, 100)">
       <circle cx="6" cy="6" r="4" fill="#e8a838"/>
-      <text x="20" y="10" class="feature">FIRE Calculator</text>
+      <text x="20" y="10" class="feature">Portfolio &amp; Tax Savings</text>
     </g>
     <g transform="translate(0, 124)">
       <circle cx="6" cy="6" r="4" fill="#e8a838"/>
-      <text x="20" y="10" class="feature">Tax Optimization</text>
+      <text x="20" y="10" class="feature">9-Page PDF Reports</text>
     </g>
   </g>
 
   <!-- Divider -->
   <line x1="54" y1="200" x2="846" y2="200" stroke="#2a3a55" stroke-width="1"/>
 
-  <!-- Command previews: 2 rows of 3 -->
+  <!-- Stage & quick-start previews: 2 rows of 3 -->
   <g transform="translate(54, 222)">
     <!-- Row 1 -->
-    <rect x="0" y="0" width="240" height="22" rx="4" fill="#142036" stroke="#2a3a55"/>
-    <text x="10" y="15" class="cmd">/finance &#8594; full plan + PDF</text>
+    <rect x="0" y="0" width="248" height="22" rx="4" fill="#142036" stroke="#2a3a55"/>
+    <text x="10" y="15" class="cmd">1. Baseline &amp; Net Worth</text>
 
-    <rect x="256" y="0" width="240" height="22" rx="4" fill="#142036" stroke="#2a3a55"/>
-    <text x="266" y="15" class="cmd">/finance-quick &#8594; 60s snapshot</text>
+    <rect x="262" y="0" width="248" height="22" rx="4" fill="#142036" stroke="#2a3a55"/>
+    <text x="272" y="15" class="cmd">2. Budget, Emergency &amp; Debt</text>
 
-    <rect x="512" y="0" width="280" height="22" rx="4" fill="#142036" stroke="#2a3a55"/>
-    <text x="522" y="15" class="cmd">/finance-retirement &#8594; projections</text>
+    <rect x="524" y="0" width="268" height="22" rx="4" fill="#142036" stroke="#2a3a55"/>
+    <text x="534" y="15" class="cmd">3. Portfolio, Screener &amp; Taxes</text>
 
     <!-- Row 2 -->
-    <rect x="0" y="30" width="240" height="22" rx="4" fill="#142036" stroke="#2a3a55"/>
-    <text x="10" y="45" class="cmd">/finance-debt &#8594; payoff plan</text>
+    <rect x="0" y="30" width="248" height="22" rx="4" fill="#142036" stroke="#2a3a55"/>
+    <text x="10" y="45" class="cmd">4. Retirement, FIRE &amp; Goals</text>
 
-    <rect x="256" y="30" width="240" height="22" rx="4" fill="#142036" stroke="#2a3a55"/>
-    <text x="266" y="45" class="cmd">/finance-fire &#8594; FIRE number</text>
+    <rect x="262" y="30" width="248" height="22" rx="4" fill="#142036" stroke="#2a3a55"/>
+    <text x="272" y="45" class="cmd">5. Health Score &amp; PDF Export</text>
 
-    <rect x="512" y="30" width="280" height="22" rx="4" fill="#142036" stroke="#2a3a55"/>
-    <text x="522" y="45" class="cmd">/finance-taxes &#8594; tax savings</text>
+    <rect x="524" y="30" width="268" height="22" rx="4" fill="#142036" stroke="#2a3a55"/>
+    <text x="534" y="45" class="cmd">./bin/start.sh  &#8594;  :8787</text>
   </g>
 
   <!-- Bottom bar: life stages -->
