@@ -225,13 +225,18 @@ Financial Health Score = (Cashflow × 0.20) + (Debt × 0.20) + (Investments × 0
 Assign grade:
 | Score | Grade | Signal |
 |-------|-------|--------|
-| 85-100 | A+ | Excellent |
-| 75-84 | A | Strong |
-| 65-74 | B+ | Above Average |
-| 55-64 | B | Average |
-| 45-54 | C | Below Average |
-| 35-44 | D | Poor |
-| 0-34 | F | Critical |
+| 90-100 | A+ | Excellent — On Track |
+| 85-89 | A | Excellent — On Track |
+| 80-84 | A- | Excellent — On Track |
+| 75-79 | B+ | Healthy — Minor Tune-Up |
+| 70-74 | B | Healthy — Minor Tune-Up |
+| 65-69 | B- | Healthy — Minor Tune-Up |
+| 60-64 | C+ | Fair — Action Needed |
+| 55-59 | C | Fair — Action Needed |
+| 50-54 | C- | Fair — Action Needed |
+| 45-49 | D+ | Weak — Plan Required |
+| 40-44 | D | Weak — Plan Required |
+| 0-39 | F | Critical — Immediate Action (Weak at 35-39) |
 
 ### Phase 4 — Generate FINANCE-ANALYSIS.md
 

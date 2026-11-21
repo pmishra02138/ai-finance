@@ -55,12 +55,18 @@ This is the flagship command. It launches **5 parallel subagents** to analyze a 
 **Financial Grade & Signal:**
 | Score | Grade | Signal |
 |-------|-------|--------|
-| 85-100 | A+ | Excellent — minor optimizations only |
-| 70-84 | A | Strong — some areas need attention |
-| 55-69 | B | Average — significant improvement opportunities |
-| 40-54 | C | Below Average — multiple critical issues |
-| 25-39 | D | Poor — urgent intervention needed |
-| 0-24 | F | Critical — fundamental problems across the board |
+| 90-100 | A+ | Excellent — On Track |
+| 85-89 | A | Excellent — On Track |
+| 80-84 | A- | Excellent — On Track |
+| 75-79 | B+ | Healthy — Minor Tune-Up |
+| 70-74 | B | Healthy — Minor Tune-Up |
+| 65-69 | B- | Healthy — Minor Tune-Up |
+| 60-64 | C+ | Fair — Action Needed |
+| 55-59 | C | Fair — Action Needed |
+| 50-54 | C- | Fair — Action Needed |
+| 45-49 | D+ | Weak — Plan Required |
+| 40-44 | D | Weak — Plan Required |
+| 0-39 | F | Critical — Immediate Action (Weak at 35-39) |
 
 ### Quick Snapshot (`/finance quick`)
 Fast 60-second financial assessment. Do NOT launch subagents. Instead:

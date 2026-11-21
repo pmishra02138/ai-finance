@@ -6,11 +6,11 @@
 - `skills/finance-*/SKILL.md` — 14 sub-skills (each must include YAML frontmatter with `name` and `description`).
 - `scripts/generate_finance_pdf.py` — ReportLab PDF generator (`--data <json>` or `--demo`).
 - `scripts/db.py` — SQLite persistence layer (`data/ai_finance.db`) with `users`, `sessions`, and `financial_plans` tables (seeds default user `user` / `password`).
-- `scripts/server.py` — FastAPI + Uvicorn backend exposing `/`, `/health`, `/auth/*`, `/plans/*`, `/demo`, `/demo-data`, `/generate`, and `/docs` (`http://localhost:8787`).
-- `frontend/` — Unified Node.js frontend (`server.js`, `package.json`, `Dockerfile`, `public/{index.html,styles.css,app.js}`) serving the web UI on `http://localhost:3000` and proxying `/api/*` to the FastAPI backend.
-- `start.sh` / `stop.sh` — Unified macOS/Linux launcher & stopper for FastAPI (`8787`) and Node.js frontend (`3000`), supporting `--local`, `--docker`, and `--restart`.
-- `start.ps1` / `stop.ps1` — Unified Windows PowerShell launcher & stopper (`-Docker`, `-Restart`, `-Port`, `-ApiPort`).
-- `Dockerfile`, `docker-compose.yml`, `.dockerignore` — Containerized PDF/API backend and Node.js frontend for macOS/Linux.
+- `scripts/server.py` — Unified single-port FastAPI + Uvicorn server (`http://localhost:8787`) serving both the static frontend (`frontend/public/`) and `/api/*` endpoints (`/api/health`, `/api/auth/*`, `/api/plans/*`, `/api/skills`, `/api/demo`, `/api/demo-data`, `/api/generate`, `/api/docs`).
+- `frontend/public/` — Static SPA frontend (`index.html`, `styles.css`, `app.js`, `skills.js`, `charts.js`) served directly by FastAPI on port `8787`.
+- `bin/start.sh` / `bin/stop.sh` — Unified macOS/Linux single-port launcher & stopper (`8787`), supporting `--local`, `--docker`, and `--restart`.
+- `bin/start.ps1` / `bin/stop.ps1` — Unified Windows PowerShell single-port launcher & stopper (`-Docker`, `-Restart`, `-Port`).
+- `Dockerfile`, `docker-compose.yml`, `.dockerignore` — Single-container non-root Docker setup on port `8787` for macOS/Linux/Windows.
 - `install.sh` / `uninstall.sh` — Installer/uninstaller supporting `--local` (AGY `~/.gemini/antigravity/skills/` + `uv sync`), `--docker` (`localhost:8787`), and `--claude` (`~/.claude/skills/`).
 - `pyproject.toml` / `requirements.txt` — Python dependencies (`reportlab>=4.0.0`, `fastapi>=0.110.0`, `uvicorn>=0.27.0`) managed with `uv`.
 
@@ -36,7 +36,7 @@
 ## Verification
 After making changes, run the applicable checks before reporting completion:
 - Python syntax: `python3 -m py_compile scripts/generate_finance_pdf.py scripts/server.py`
-- Shell syntax: `bash -n install.sh uninstall.sh start.sh stop.sh`
+- Shell syntax: `bash -n install.sh uninstall.sh bin/start.sh bin/stop.sh`
 - E2E suite: `uv run python -m unittest discover -s tests -v` (or `python3 -m unittest discover -s tests -v`)
 - Symlinks check: `ls -la .agents/skills/`
 - PDF smoke test (if `reportlab` is installed): `uv run python scripts/generate_finance_pdf.py --demo --output /tmp/FINANCE-PLAN-sample.pdf`
