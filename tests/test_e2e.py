@@ -265,7 +265,7 @@ class TestDatabaseLayer(unittest.TestCase):
 
 
 class TestLocalhostServerE2E(unittest.TestCase):
-    """Test FastAPI backend + SQLite + Node.js unified frontend proxy end-to-end."""
+    """Test unified single-port FastAPI + SQLite + static frontend end-to-end."""
 
     @staticmethod
     def _free_port() -> int:
@@ -277,70 +277,39 @@ class TestLocalhostServerE2E(unittest.TestCase):
         HAS_REPORTLAB and HAS_FASTAPI and HAS_UVICORN,
         "reportlab, fastapi, and uvicorn must be installed in current Python environment",
     )
-    def test_fullstack_auth_crud_pdf_and_node_proxy(self) -> None:
+    def test_fullstack_auth_crud_pdf_and_single_port_ui(self) -> None:
         if str(SCRIPTS_DIR) not in sys.path:
             sys.path.insert(0, str(SCRIPTS_DIR))
         import uvicorn
         import server as pdf_server
 
-        api_port = self._free_port()
-        fe_port = self._free_port()
+        port = self._free_port()
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             prev_db = os.environ.get("AI_FINANCE_DB_PATH")
             os.environ["AI_FINANCE_DB_PATH"] = str(Path(tmp_dir) / "e2e.db")
 
-            config = uvicorn.Config(pdf_server.app, host="127.0.0.1", port=api_port, log_level="error")
+            config = uvicorn.Config(pdf_server.app, host="127.0.0.1", port=port, log_level="error")
             uv_server = uvicorn.Server(config)
             api_thread = threading.Thread(target=uv_server.run, daemon=True)
             api_thread.start()
 
-            fe_env = os.environ.copy()
-            fe_env["HOST"] = "127.0.0.1"
-            fe_env["PORT"] = str(fe_port)
-            fe_env["BACKEND_URL"] = f"http://127.0.0.1:{api_port}"
-            fe_proc = subprocess.Popen(
-                ["node", str(REPO_ROOT / "frontend" / "server.js")],
-                env=fe_env,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-
             try:
-                api_base = f"http://127.0.0.1:{api_port}"
-                fe_base = f"http://127.0.0.1:{fe_port}"
+                base = f"http://127.0.0.1:{port}"
 
-                # Wait for both servers
-                for url in (f"{api_base}/health", f"{fe_base}/api/health"):
-                    ready = False
-                    for _ in range(40):
-                        try:
-                            with urllib.request.urlopen(url) as resp:
-                                if resp.status == 200:
-                                    ready = True
-                                    break
-                        except Exception:
-                            time.sleep(0.1)
-                    self.assertTrue(ready, f"Server not ready at {url}")
+                # Wait for single-port server
+                ready = False
+                for _ in range(40):
+                    try:
+                        with urllib.request.urlopen(f"{base}/api/health") as resp:
+                            if resp.status == 200:
+                                ready = True
+                                break
+                    except Exception:
+                        time.sleep(0.1)
+                self.assertTrue(ready, f"Server not ready at {base}/api/health")
 
-                # 1. FastAPI root returns JSON for API clients and redirects browsers to :3000
-                with urllib.request.urlopen(f"{api_base}/") as resp:
-                    self.assertEqual(resp.status, 200)
-                    root_body = json.loads(resp.read().decode("utf-8"))
-                    self.assertEqual(root_body["status"], "ok")
-
-                class NoRedirect(urllib.request.HTTPRedirectHandler):
-                    def redirect_request(self, req, fp, code, msg, headers, newurl):
-                        return None
-
-                opener = urllib.request.build_opener(NoRedirect)
-                html_req = urllib.request.Request(f"{api_base}/", headers={"Accept": "text/html"})
-                with self.assertRaises(urllib.error.HTTPError) as ctx:
-                    opener.open(html_req)
-                self.assertEqual(ctx.exception.code, 307)
-                self.assertTrue(ctx.exception.headers.get("Location", "").endswith(":3000"))
-
-                # 2. Node.js frontend serves HTML, CSS, and modular JS files
+                # 1. Static frontend assets & 404 for missing extensioned files
                 for asset, snippet in (
                     ("/", "AI Personal Finance Advisor"),
                     ("/styles.css", ".topbar"),
@@ -348,20 +317,29 @@ class TestLocalhostServerE2E(unittest.TestCase):
                     ("/skills.js", "FinanceSkills"),
                     ("/app.js", "/auth/login"),
                 ):
-                    with urllib.request.urlopen(f"{fe_base}{asset}") as resp:
+                    with urllib.request.urlopen(f"{base}{asset}") as resp:
                         self.assertEqual(resp.status, 200)
                         self.assertIn(snippet, resp.read().decode("utf-8"))
 
-                # 2b. /api/skills returns all 14 skills across 5 stages
-                with urllib.request.urlopen(f"{fe_base}/api/skills") as resp:
+                with self.assertRaises(urllib.error.HTTPError) as ctx:
+                    urllib.request.urlopen(f"{base}/does-not-exist.js")
+                self.assertEqual(ctx.exception.code, 404)
+
+                app_js = (REPO_ROOT / "frontend" / "public" / "app.js").read_text(encoding="utf-8")
+                self.assertNotIn("SQLite", app_js)
+                self.assertNotIn("skill history", app_js)
+                self.assertNotIn(".md", app_js)
+
+                # 2. /api/skills returns all 14 skills across 5 stages
+                with urllib.request.urlopen(f"{base}/api/skills") as resp:
                     self.assertEqual(resp.status, 200)
                     catalog = json.loads(resp.read().decode("utf-8"))
                     self.assertEqual(len(catalog["stages"]), 5)
                     self.assertEqual(catalog["total_skills"], 14)
 
-                # 2c. User registration works & duplicate returns 409
+                # 3. User registration works & duplicate returns 409
                 reg_req = urllib.request.Request(
-                    f"{fe_base}/api/auth/register",
+                    f"{base}/api/auth/register",
                     data=json.dumps({"username": "alice_test", "password": "secret123"}).encode("utf-8"),
                     headers={"Content-Type": "application/json"},
                     method="POST",
@@ -372,7 +350,7 @@ class TestLocalhostServerE2E(unittest.TestCase):
                     self.assertEqual(reg_data["user"]["username"], "alice_test")
 
                 dup_req = urllib.request.Request(
-                    f"{fe_base}/api/auth/register",
+                    f"{base}/api/auth/register",
                     data=json.dumps({"username": "alice_test", "password": "secret123"}).encode("utf-8"),
                     headers={"Content-Type": "application/json"},
                     method="POST",
@@ -381,14 +359,14 @@ class TestLocalhostServerE2E(unittest.TestCase):
                     urllib.request.urlopen(dup_req)
                 self.assertEqual(ctx.exception.code, 409)
 
-                # 3. Unauthenticated /api/plans returns 401
+                # 4. Unauthenticated /api/plans returns 401
                 with self.assertRaises(urllib.error.HTTPError) as ctx:
-                    urllib.request.urlopen(f"{fe_base}/api/plans")
+                    urllib.request.urlopen(f"{base}/api/plans")
                 self.assertEqual(ctx.exception.code, 401)
 
-                # 4. Login with wrong password returns 401
+                # 5. Login with wrong password returns 401
                 bad_login = urllib.request.Request(
-                    f"{fe_base}/api/auth/login",
+                    f"{base}/api/auth/login",
                     data=json.dumps({"username": "user", "password": "bad"}).encode("utf-8"),
                     headers={"Content-Type": "application/json"},
                     method="POST",
@@ -397,9 +375,9 @@ class TestLocalhostServerE2E(unittest.TestCase):
                     urllib.request.urlopen(bad_login)
                 self.assertEqual(ctx.exception.code, 401)
 
-                # 5. Login with default user/password succeeds through Node proxy
+                # 6. Login with default user/password succeeds
                 login_req = urllib.request.Request(
-                    f"{fe_base}/api/auth/login",
+                    f"{base}/api/auth/login",
                     data=json.dumps({"username": "user", "password": "password"}).encode("utf-8"),
                     headers={"Content-Type": "application/json"},
                     method="POST",
@@ -411,17 +389,17 @@ class TestLocalhostServerE2E(unittest.TestCase):
                 self.assertEqual(auth_data["user"]["username"], "user")
                 auth_headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
-                # 6. /api/auth/me & seeded /api/plans
-                with urllib.request.urlopen(urllib.request.Request(f"{fe_base}/api/auth/me", headers=auth_headers)) as resp:
+                # 7. /api/auth/me & seeded /api/plans
+                with urllib.request.urlopen(urllib.request.Request(f"{base}/api/auth/me", headers=auth_headers)) as resp:
                     self.assertEqual(json.loads(resp.read().decode("utf-8"))["username"], "user")
 
-                with urllib.request.urlopen(urllib.request.Request(f"{fe_base}/api/plans", headers=auth_headers)) as resp:
+                with urllib.request.urlopen(urllib.request.Request(f"{base}/api/plans", headers=auth_headers)) as resp:
                     plans = json.loads(resp.read().decode("utf-8"))["plans"]
                     self.assertGreaterEqual(len(plans), 1)
 
-                # 7. Create -> Update -> PDF -> Delete plan via Node proxy
+                # 8. Create -> Update -> Run all 14 skills -> PDF -> Delete
                 create_req = urllib.request.Request(
-                    f"{fe_base}/api/plans",
+                    f"{base}/api/plans",
                     data=json.dumps({"title": "E2E & Test Plan", "payload": {"client_name": "E2E & Test", "health_score": 85}}).encode("utf-8"),
                     headers=auth_headers,
                     method="POST",
@@ -432,7 +410,7 @@ class TestLocalhostServerE2E(unittest.TestCase):
                 plan_id = created["id"]
 
                 update_req = urllib.request.Request(
-                    f"{fe_base}/api/plans/{plan_id}",
+                    f"{base}/api/plans/{plan_id}",
                     data=json.dumps({"title": "E2E Updated", "payload": {"client_name": "E2E Updated", "health_score": 92}}).encode("utf-8"),
                     headers=auth_headers,
                     method="PUT",
@@ -441,10 +419,9 @@ class TestLocalhostServerE2E(unittest.TestCase):
                     self.assertEqual(resp.status, 200)
                     self.assertEqual(json.loads(resp.read().decode("utf-8"))["grade"], "A+")
 
-                # 7b. Run all 14 skills through Node proxy with sync_to_plan=True and verify SQLite persistence
                 for sk in catalog["skills"]:
                     run_req = urllib.request.Request(
-                        f"{fe_base}/api/plans/{plan_id}/skills/{sk['name']}/run",
+                        f"{base}/api/plans/{plan_id}/skills/{sk['name']}/run",
                         data=json.dumps({"inputs": {}, "sync_to_plan": True}).encode("utf-8"),
                         headers=auth_headers,
                         method="POST",
@@ -454,26 +431,40 @@ class TestLocalhostServerE2E(unittest.TestCase):
                         run_body = json.loads(resp.read().decode("utf-8"))
                         self.assertEqual(run_body["result"]["skill"], sk["name"])
 
-                with urllib.request.urlopen(urllib.request.Request(f"{fe_base}/api/plans/{plan_id}/skills", headers=auth_headers)) as resp:
+                # Verify syncing a category skill (debt = $0 -> 100) recalculates composite health_score
+                debt_sync_req = urllib.request.Request(
+                    f"{base}/api/plans/{plan_id}/skills/finance-debt/run",
+                    data=json.dumps({"inputs": {"accounts": [], "extra_monthly_payment": 0}, "sync_to_plan": True}).encode("utf-8"),
+                    headers=auth_headers,
+                    method="POST",
+                )
+                with urllib.request.urlopen(debt_sync_req) as resp:
+                    self.assertEqual(resp.status, 200)
+                    debt_sync_body = json.loads(resp.read().decode("utf-8"))
+                    self.assertIsNotNone(debt_sync_body["updated_plan"])
+                    self.assertEqual(debt_sync_body["updated_plan"]["payload"]["categories"]["debt"], 100.0)
+                    self.assertNotEqual(debt_sync_body["updated_plan"]["health_score"], 92.0)
+
+                with urllib.request.urlopen(urllib.request.Request(f"{base}/api/plans/{plan_id}/skills", headers=auth_headers)) as resp:
                     runs_body = json.loads(resp.read().decode("utf-8"))
                     self.assertEqual(len(runs_body["completed_skills"]), 14)
 
-                with urllib.request.urlopen(urllib.request.Request(f"{fe_base}/api/plans/{plan_id}/pdf", headers=auth_headers)) as resp:
+                with urllib.request.urlopen(urllib.request.Request(f"{base}/api/plans/{plan_id}/pdf", headers=auth_headers)) as resp:
                     self.assertEqual(resp.status, 200)
                     self.assertEqual(resp.headers.get("Content-Type"), "application/pdf")
                     self.assertTrue(resp.read().startswith(b"%PDF-"))
 
-                del_req = urllib.request.Request(f"{fe_base}/api/plans/{plan_id}", headers=auth_headers, method="DELETE")
+                del_req = urllib.request.Request(f"{base}/api/plans/{plan_id}", headers=auth_headers, method="DELETE")
                 with urllib.request.urlopen(del_req) as resp:
                     self.assertEqual(resp.status, 200)
 
-                # 8. Direct /api/demo & /api/generate & 422 validation
-                with urllib.request.urlopen(f"{fe_base}/api/demo") as resp:
+                # 9. Direct /api/demo & /api/generate & 422 validation
+                with urllib.request.urlopen(f"{base}/api/demo") as resp:
                     self.assertEqual(resp.status, 200)
                     self.assertTrue(resp.read().startswith(b"%PDF-"))
 
                 bad_req = urllib.request.Request(
-                    f"{fe_base}/api/generate",
+                    f"{base}/api/generate",
                     data=b"[1, 2, 3]",
                     headers={"Content-Type": "application/json"},
                     method="POST",
@@ -482,19 +473,14 @@ class TestLocalhostServerE2E(unittest.TestCase):
                     urllib.request.urlopen(bad_req)
                 self.assertEqual(ctx.exception.code, 422)
 
-                # 9. Logout revokes session
-                logout_req = urllib.request.Request(f"{fe_base}/api/auth/logout", headers=auth_headers, method="POST")
+                # 10. Logout revokes session
+                logout_req = urllib.request.Request(f"{base}/api/auth/logout", headers=auth_headers, method="POST")
                 with urllib.request.urlopen(logout_req) as resp:
                     self.assertEqual(resp.status, 200)
                 with self.assertRaises(urllib.error.HTTPError) as ctx:
-                    urllib.request.urlopen(urllib.request.Request(f"{fe_base}/api/auth/me", headers=auth_headers))
+                    urllib.request.urlopen(urllib.request.Request(f"{base}/api/auth/me", headers=auth_headers))
                 self.assertEqual(ctx.exception.code, 401)
             finally:
-                fe_proc.terminate()
-                try:
-                    fe_proc.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    fe_proc.kill()
                 uv_server.should_exit = True
                 api_thread.join(timeout=5)
                 if prev_db is None:
@@ -504,7 +490,7 @@ class TestLocalhostServerE2E(unittest.TestCase):
 
 
 class TestDockerConfigs(unittest.TestCase):
-    """Verify Docker & uv files for macOS localhost deployment are valid and consistent."""
+    """Verify single-port Docker & uv files are valid and consistent."""
 
     def test_docker_files_exist_and_expose_8787(self) -> None:
         dockerfile = (REPO_ROOT / "Dockerfile").read_text(encoding="utf-8")
@@ -513,10 +499,12 @@ class TestDockerConfigs(unittest.TestCase):
         reqs = (REPO_ROOT / "requirements.txt").read_text(encoding="utf-8")
 
         self.assertIn("8787", dockerfile)
+        self.assertIn("USER aifinance", dockerfile)
+        self.assertIn("HEALTHCHECK", dockerfile)
         self.assertIn("uv sync", dockerfile)
-        self.assertIn("uvicorn", dockerfile)
         self.assertIn("scripts.server:app", dockerfile)
         self.assertIn("127.0.0.1:8787:8787", compose)
+        self.assertNotIn("3000:3000", compose)
         self.assertIn("fastapi", pyproject)
         self.assertIn("reportlab>=4.0.0", pyproject)
         self.assertIn("reportlab>=4.0.0", reqs)

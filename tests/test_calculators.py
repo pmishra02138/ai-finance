@@ -24,6 +24,9 @@ class TestSkillRegistryAndCalculators(unittest.TestCase):
         self.assertEqual(set(CALCULATORS.keys()), VALID_SKILL_NAMES)
         for sk in cat["skills"]:
             self.assertTrue(sk["description"], f"Missing description for {sk['name']}")
+            self.assertNotIn(".md", sk["description"].lower())
+            self.assertNotIn("subagent", sk["description"].lower())
+            self.assertNotIn("/finance", sk["description"].lower())
 
     def test_all_14_skills_run_with_demo_plan(self) -> None:
         demo = _demo_data()
@@ -70,6 +73,21 @@ class TestSkillRegistryAndCalculators(unittest.TestCase):
             {},
         )
         self.assertEqual(ret_res["score"], 100.0)
+
+    def test_budget_preserves_detailed_expenses_and_taxes_catchup_and_portfolio_sum(self) -> None:
+        demo = _demo_data()
+        budget_res = run_skill("finance-budget", {"monthly_income": 9200, "monthly_needs": 4600, "monthly_wants": 1600}, demo)
+        self.assertEqual(len(budget_res["plan_patch"]["cash_flow"]["expenses"]), len(demo["cash_flow"]["expenses"]))
+        self.assertIn("budget_50_30_20", budget_res["plan_patch"]["cash_flow"])
+
+        tax_res = run_skill("finance-taxes", {"age": 56, "current_401k": 0, "current_hsa": 0, "current_ira": 0}, demo)
+        rows = {r[0]: r[2] for r in tax_res["tables"][0]["rows"]}
+        self.assertEqual(rows["Traditional 401(k)"], "$31,000")
+        self.assertEqual(rows["HSA (Triple Tax-Free)"], "$5,300")
+        self.assertEqual(rows["IRA / Backdoor Roth"], "$8,000")
+
+        port_res = run_skill("finance-portfolio", {"us_stocks_pct": 50, "intl_stocks_pct": 10, "bonds_pct": 10, "reits_pct": 0, "cash_pct": 0}, demo)
+        self.assertIn("sum to 70.0%", port_res["summary"])
 
 
 if __name__ == "__main__":
