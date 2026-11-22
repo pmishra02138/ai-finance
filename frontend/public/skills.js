@@ -1,4 +1,4 @@
-/* Declarative schemas & result renderer for all 14 financial skills */
+/* Declarative schemas & result renderer for all 14 financial planning modules */
 
 window.FinanceSkills = (function () {
   const esc = (s) => window.FinanceCharts.escapeHtml(s);

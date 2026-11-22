@@ -71,9 +71,9 @@ Clicking **Run & Sync to Plan** in any module updates your master plan in SQLite
 
 ---
 
-## 📄 CLI PDF Generation & Testing
+## 📄 Standalone PDF Generation & Testing
 
-### Generate a Demo PDF via CLI
+### Generate a Sample PDF Directly
 ```bash
 uv sync --no-install-project --no-dev
 uv run --no-sync python scripts/generate_finance_pdf.py --demo

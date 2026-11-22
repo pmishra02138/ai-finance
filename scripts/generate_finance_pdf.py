@@ -931,7 +931,7 @@ def build_90_day_plan(story: List[Any], styles: Dict[str, ParagraphStyle], data:
     story.append(Spacer(1, 0.3 * inch))
     story.append(Paragraph("After 90 Days", styles["h2"]))
     after = plan.get("after_90_days") or (
-        "Re-run /finance to recalculate your Financial Health Score. Most users see "
+        "Re-run your Full Health Analysis in the web app to recalculate your Financial Health Score. Most users see "
         "10–20 point gains in the first 90 days of focused execution."
     )
     story.append(Paragraph(esc(after), styles["body_just"]))
@@ -1045,7 +1045,7 @@ def _demo_data() -> Dict[str, Any]:
             ],
             "commentary": (
                 "Bumping the 401(k) deferral from 8% to 12% closes the gap and captures additional employer match "
-                "if the plan allows. Run /finance-retirement to model spousal contributions."
+                "if the plan allows. Use the Retirement Planner module to model spousal contributions."
             ),
         },
         "protection": {
@@ -1094,7 +1094,7 @@ def _demo_data() -> Dict[str, Any]:
                 "Schedule annual review reminder",
             ],
             "after_90_days": (
-                "Re-run /finance to see updated Financial Health Score. Most clients executing this plan "
+                "Re-run your Full Health Analysis to see your updated Financial Health Score. Most clients executing this plan "
                 "move from B- to B+ or A- in 90 days."
             ),
         },
@@ -1142,7 +1142,7 @@ def build_pdf(data: Dict[str, Any], output_path: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# CLI
+# Main Entrypoint
 # ---------------------------------------------------------------------------
 def main() -> int:
     parser = argparse.ArgumentParser(

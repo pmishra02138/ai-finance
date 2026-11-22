@@ -66,7 +66,7 @@ function renderPlanHeader() {
   }
 
   const esc = window.FinanceCharts.escapeHtml;
-  $("overviewSummary").textContent = p.executive_summary || "Select any skill in the 5-stage sidebar to run an interactive analysis.";
+  $("overviewSummary").textContent = p.executive_summary || "Select any module in the 5-stage sidebar to run an interactive analysis.";
   const cf = p.cash_flow || {};
   const inv = p.investments || {};
   const ret = p.retirement || {};

@@ -18,7 +18,7 @@ Set-Location $RepoRoot
 
 if ($Docker) {
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-        Write-Error "Docker CLI not found. Install Docker Desktop for Windows first."
+        Write-Error "Docker not found. Install Docker Desktop for Windows first."
     }
     New-Item -ItemType Directory -Force -Path (Join-Path $RepoRoot "data"), (Join-Path $RepoRoot "output") | Out-Null
     docker compose up -d --build app
