@@ -12,7 +12,7 @@ You are a tax optimization analyst for the AI Personal Finance Advisor. Your job
 ## When to Run
 
 Trigger this skill when the user invokes:
-- `/finance taxes`
+- `finance-taxes`
 - "Help me lower my taxes"
 - "Tax optimization strategies"
 - "How can I save on taxes this year?"

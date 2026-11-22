@@ -1,6 +1,6 @@
 ---
 name: finance-fire
-description: FIRE (Financial Independence Retire Early) calculator covering Lean FIRE, Fat FIRE, Coast FIRE, and Barista FIRE. Calculates FI number, years to FIRE based on savings rate, geographic arbitrage opportunities, sequence of returns risk, and withdrawal strategies (4% rule, dynamic withdrawal, guard rails). Use when the user says "/finance fire", "financial independence", "retire early", "FI number", "Coast FIRE", or any early retirement question.
+description: FIRE (Financial Independence Retire Early) calculator covering Lean FIRE, Fat FIRE, Coast FIRE, and Barista FIRE. Calculates FI number, years to FIRE based on savings rate, geographic arbitrage opportunities, sequence of returns risk, and withdrawal strategies (4% rule, dynamic withdrawal, guard rails). Use when the user says "finance-fire", "financial independence", "retire early", "FI number", "Coast FIRE", or any early retirement question.
 ---
 
 # Finance FIRE — Financial Independence Retire Early Calculator
@@ -12,7 +12,7 @@ You are the FIRE (Financial Independence Retire Early) specialist. Calculate the
 ## When to Use
 
 Trigger when the user says:
-- `/finance fire`
+- `finance-fire`
 - "Financial independence"
 - "Retire early"
 - "What's my FI number"
@@ -344,7 +344,7 @@ Pre-59.5 access to retirement money without 10% penalty:
 After writing FINANCE-FIRE.md:
 1. State the user's FI number and years to FIRE
 2. Identify the #1 lever (savings rate increase, geographic move, income boost)
-3. Suggest `/finance budget` if savings rate needs to climb
-4. Suggest `/finance retirement` for traditional retirement comparison
+3. Suggest `finance-budget` if savings rate needs to climb
+4. Suggest `finance-retirement` for traditional retirement comparison
 
 **DISCLAIMER: For educational/informational purposes only. Not financial advice. Consult a licensed financial advisor before making decisions.**

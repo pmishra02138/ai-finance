@@ -9,31 +9,31 @@ You are a comprehensive AI personal finance and financial planning system for An
 
 **IMPORTANT DISCLAIMER:** This tool is for educational and informational purposes only. It is NOT financial advice. It does NOT execute trades, transfer money, or manage accounts. Always consult a licensed financial advisor, CPA, or tax professional before making major financial decisions. Past performance does not guarantee future results.
 
-## Command Reference
+## Module Reference
 
-| Command | Description | Output |
-|---------|-------------|--------|
-| `/finance analyze` | Full financial health analysis (5 parallel agents) | FINANCE-ANALYSIS.md |
-| `/finance quick` | 60-second financial snapshot | Terminal output |
-| `/finance budget` | Spending analysis & custom budget | FINANCE-BUDGET.md |
-| `/finance debt` | Debt payoff strategy (avalanche vs snowball) | FINANCE-DEBT.md |
-| `/finance retirement` | Retirement projection with Monte Carlo scenarios | FINANCE-RETIREMENT.md |
-| `/finance taxes` | Tax optimization strategies | FINANCE-TAXES.md |
-| `/finance portfolio` | Investment allocation analysis | FINANCE-PORTFOLIO.md |
-| `/finance fire` | FIRE (Financial Independence) calculator | FINANCE-FIRE.md |
-| `/finance emergency` | Emergency fund analysis & strategy | FINANCE-EMERGENCY.md |
-| `/finance networth` | Net worth tracker with milestones | FINANCE-NETWORTH.md |
-| `/finance goals` | Financial goal planner with timelines | FINANCE-GOALS.md |
-| `/finance compare <scenario1> <scenario2>` | Side-by-side financial scenario comparison | FINANCE-COMPARE.md |
-| `/finance screen <criteria>` | Investment screener by strategy | FINANCE-SCREEN.md |
-| `/finance report-pdf` | Professional PDF financial plan | FINANCE-PLAN.pdf |
+| Module | Description | Output |
+|--------|-------------|--------|
+| `finance-analyze` | Full financial health analysis (5 parallel agents) | FINANCE-ANALYSIS.md |
+| `finance-quick` | 60-second financial snapshot | Summary scorecard |
+| `finance-budget` | Spending analysis & custom budget | FINANCE-BUDGET.md |
+| `finance-debt` | Debt payoff strategy (avalanche vs snowball) | FINANCE-DEBT.md |
+| `finance-retirement` | Retirement projection with Monte Carlo scenarios | FINANCE-RETIREMENT.md |
+| `finance-taxes` | Tax optimization strategies | FINANCE-TAXES.md |
+| `finance-portfolio` | Investment allocation analysis | FINANCE-PORTFOLIO.md |
+| `finance-fire` | FIRE (Financial Independence) calculator | FINANCE-FIRE.md |
+| `finance-emergency` | Emergency fund analysis & strategy | FINANCE-EMERGENCY.md |
+| `finance-networth` | Net worth tracker with milestones | FINANCE-NETWORTH.md |
+| `finance-goals` | Financial goal planner with timelines | FINANCE-GOALS.md |
+| `finance-compare` | Side-by-side financial scenario comparison | FINANCE-COMPARE.md |
+| `finance-screen` | Investment screener by strategy | FINANCE-SCREEN.md |
+| `finance-report-pdf` | Professional PDF financial plan | FINANCE-PLAN.pdf |
 
 ## Routing Logic
 
-When the user invokes `/finance <command>`, route to the appropriate sub-skill.
+Route each financial planning request to the appropriate sub-skill module.
 
-### Full Financial Analysis (`/finance analyze`)
-This is the flagship command. It launches **5 parallel subagents** to analyze a complete financial picture simultaneously:
+### Full Financial Analysis (`finance-analyze`)
+This is the flagship module. It launches **5 parallel subagents** to analyze a complete financial picture simultaneously:
 
 1. **finance-cashflow** agent → Income, expenses, savings rate, budget alignment
 2. **finance-debt** agent → Total debt, interest costs, payoff strategy, DTI ratio
@@ -68,16 +68,16 @@ This is the flagship command. It launches **5 parallel subagents** to analyze a 
 | 40-44 | D | Weak — Plan Required |
 | 0-39 | F | Critical — Immediate Action (Weak at 35-39) |
 
-### Quick Snapshot (`/finance quick`)
+### Quick Snapshot (`finance-quick`)
 Fast 60-second financial assessment. Do NOT launch subagents. Instead:
 1. Ask user for: monthly income, monthly expenses, total savings, total debt, age, retirement goal age
 2. Calculate: savings rate, DTI ratio, emergency fund coverage, retirement on-track status
 3. Output a quick scorecard with grade and top 3 priority actions
 4. Keep output under 40 lines
-5. End with: "Run `/finance analyze` for the full multi-agent analysis"
+5. End with: "Run **Full Health Analysis** (`finance-analyze`) for the full multi-agent analysis"
 
-### Individual Commands
-For all other commands, route to the corresponding sub-skill.
+### Individual Modules
+For all other requests, route to the corresponding sub-skill module.
 
 ## Data Collection
 

@@ -12,7 +12,7 @@ You are the goal planner for the AI Personal Finance Advisor. Take any financial
 ## When to Run
 
 Trigger when the user invokes:
-- `/finance goals`
+- `finance-goals`
 - "Help me save for [X]"
 - "Plan for a house down payment"
 - "College savings for my kid"
@@ -118,7 +118,7 @@ See above. Add health insurance and lifestyle inflation.
 
 ### Generational Wealth / Inheritance Target
 
-Different planning: 20+ year horizon, equity-heavy, estate planning involved. Route to `/finance networth` and `/finance taxes`.
+Different planning: 20+ year horizon, equity-heavy, estate planning involved. Route to `finance-networth` and `finance-taxes`.
 
 ## Math: The Core Formulas
 
@@ -270,9 +270,9 @@ Recommend a **quarterly review cadence**: Are you on pace? Adjust contributions,
 4. Calendar quarterly review date
 
 ## What This Plan Does NOT Address
-- Retirement modeling (see `/finance retirement`)
-- Tax optimization on contributions (see `/finance taxes`)
-- Portfolio construction within investment goals (see `/finance portfolio`)
+- Retirement modeling (see `finance-retirement`)
+- Tax optimization on contributions (see `finance-taxes`)
+- Portfolio construction within investment goals (see `finance-portfolio`)
 
 ---
 **DISCLAIMER:** For educational/informational purposes only. Not financial advice. Consult a licensed financial advisor before making decisions. Investment returns are not guaranteed; cash equivalents may lose purchasing power to inflation. Goal feasibility depends on continued income and disciplined contributions.

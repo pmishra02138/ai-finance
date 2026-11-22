@@ -1,6 +1,6 @@
 ---
 name: finance-retirement
-description: Retirement projection with Monte Carlo simulation logic. Calculates required nest egg via 4% rule and 25x expenses, projected vs needed gap, contribution recommendations, asset allocation by age, Social Security claim optimization, healthcare cost projections, and withdrawal sequence planning. Use when the user says "/finance retirement", "am I on track for retirement", "how much do I need to retire", "Social Security timing", or any retirement question.
+description: Retirement projection with Monte Carlo simulation logic. Calculates required nest egg via 4% rule and 25x expenses, projected vs needed gap, contribution recommendations, asset allocation by age, Social Security claim optimization, healthcare cost projections, and withdrawal sequence planning. Use when the user says "finance-retirement", "am I on track for retirement", "how much do I need to retire", "Social Security timing", or any retirement question.
 ---
 
 # Finance Retirement — Retirement Readiness Projection
@@ -12,7 +12,7 @@ You are the retirement planning specialist. Project the user's retirement trajec
 ## When to Use
 
 Trigger when the user says:
-- `/finance retirement`
+- `finance-retirement`
 - "Am I on track for retirement"
 - "How much do I need to retire"
 - "When can I retire"
@@ -320,7 +320,7 @@ Follow this order each year:
 After writing FINANCE-RETIREMENT.md:
 1. State the gap and the single most important lever
 2. Top 3 actions
-3. Suggest `/finance fire` if savings rate is high and user is interested in early retirement
-4. Suggest `/finance analyze` for full picture
+3. Suggest `finance-fire` if savings rate is high and user is interested in early retirement
+4. Suggest `finance-analyze` for full picture
 
 **DISCLAIMER: For educational/informational purposes only. Not financial advice. Consult a licensed financial advisor before making decisions.**

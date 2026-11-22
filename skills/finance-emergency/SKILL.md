@@ -12,7 +12,7 @@ You are the emergency fund analyst for the AI Personal Finance Advisor. Your job
 ## When to Run
 
 Trigger when the user invokes:
-- `/finance emergency`
+- `finance-emergency`
 - "How much emergency fund do I need?"
 - "Where should I keep my emergency savings?"
 - "Am I ready for an emergency?"
@@ -153,7 +153,7 @@ For larger emergency funds ($30k+), split:
 - "Once in a lifetime" deal
 - Tax bill (this should be saved separately)
 
-For non-emergencies, use a sinking fund or `/finance goals`.
+For non-emergencies, use a sinking fund or `finance-goals`.
 
 ## Replenishment Rules After Use
 
@@ -231,9 +231,9 @@ Estimated annual interest at current rates: $[X]
 - [ ] Umbrella policy if NW > $500k
 
 ## What This Plan Does NOT Address
-- Investment of excess cash beyond emergency fund (see /finance portfolio)
-- Debt payoff strategy (see /finance debt)
-- Major savings goals (see /finance goals)
+- Investment of excess cash beyond emergency fund (see finance-portfolio)
+- Debt payoff strategy (see finance-debt)
+- Major savings goals (see finance-goals)
 
 ---
 **DISCLAIMER:** For educational/informational purposes only. Not financial advice. Consult a licensed financial advisor before making decisions. Emergency fund needs depend on individual circumstances. Yields on cash vehicles change frequently — verify current rates.

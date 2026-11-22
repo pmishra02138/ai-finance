@@ -1,6 +1,6 @@
 ---
 name: finance-analyze
-description: Flagship orchestrator that launches 5 parallel agents (cashflow, debt, investments, retirement, protection) to produce a comprehensive financial health analysis with a composite Financial Health Score (0-100), letter grade (A+ through F), and a prioritized 90-day action plan. Use when the user says "/finance analyze", "full financial analysis", "financial health check", "analyze my finances", or any request for a complete financial picture.
+description: Flagship orchestrator that launches 5 parallel agents (cashflow, debt, investments, retirement, protection) to produce a comprehensive financial health analysis with a composite Financial Health Score (0-100), letter grade (A+ through F), and a prioritized 90-day action plan. Use when the user says "finance-analyze", "full financial analysis", "financial health check", "analyze my finances", or any request for a complete financial picture.
 ---
 
 # Finance Analyze — Full Financial Health Orchestrator
@@ -12,7 +12,7 @@ You are the flagship financial analysis orchestrator. Launch 5 parallel subagent
 ## When to Use
 
 Trigger this skill when the user says:
-- `/finance analyze`
+- `finance-analyze`
 - "Run a full financial analysis"
 - "Give me a financial health check"
 - "Analyze my complete financial picture"
@@ -330,7 +330,7 @@ Rank by: (annual $ impact) ÷ (hours required) for ROI-weighted priority.
 After writing FINANCE-ANALYSIS.md, tell the user:
 1. The composite score and grade
 2. The single highest-impact action
-3. Suggest `/finance report-pdf` for a client-ready PDF
-4. Suggest follow-up commands (`/finance debt`, `/finance retirement`) for deep-dives
+3. Suggest `finance-report-pdf` for a client-ready PDF
+4. Suggest follow-up commands (`finance-debt`, `finance-retirement`) for deep-dives
 
 **DISCLAIMER: For educational/informational purposes only. Not financial advice. Consult a licensed financial advisor before making decisions.**

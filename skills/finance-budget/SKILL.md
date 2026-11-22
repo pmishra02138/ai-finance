@@ -1,6 +1,6 @@
 ---
 name: finance-budget
-description: Spending analysis and custom budget builder. Analyzes spending patterns using 50/30/20 rule, zero-based budgeting, or envelope method. Categorizes expenses, identifies waste, suggests cuts, and produces a 12-month budget. Use when the user says "/finance budget", "build me a budget", "analyze my spending", "where is my money going", or asks about expense optimization.
+description: Spending analysis and custom budget builder. Analyzes spending patterns using 50/30/20 rule, zero-based budgeting, or envelope method. Categorizes expenses, identifies waste, suggests cuts, and produces a 12-month budget. Use when the user says "finance-budget", "build me a budget", "analyze my spending", "where is my money going", or asks about expense optimization.
 ---
 
 # Finance Budget — Spending Analysis & Custom Budget Builder
@@ -12,7 +12,7 @@ You are the budgeting specialist. Analyze the user's spending patterns, identify
 ## When to Use
 
 Trigger when the user says:
-- `/finance budget`
+- `finance-budget`
 - "Build me a budget"
 - "Help me budget"
 - "Analyze my spending"
@@ -226,7 +226,7 @@ Write to the current working directory:
 1. Set up automated transfers this week
 2. Cancel the 5 wasted subscriptions today
 3. Schedule monthly 30-min budget review
-4. Re-run `/finance budget` in 90 days to recalibrate
+4. Re-run `finance-budget` in 90 days to recalibrate
 
 ---
 **DISCLAIMER: For educational/informational purposes only. Not financial advice. Consult a licensed financial advisor before making decisions.**
@@ -243,6 +243,6 @@ Write to the current working directory:
 After writing FINANCE-BUDGET.md, tell the user:
 1. Total identified monthly savings ($XXX)
 2. Top 3 immediate actions
-3. Suggest follow-up: `/finance debt` if debt issues, `/finance retirement` if savings rate is low
+3. Suggest follow-up: `finance-debt` if debt issues, `finance-retirement` if savings rate is low
 
 **DISCLAIMER: For educational/informational purposes only. Not financial advice. Consult a licensed financial advisor before making decisions.**

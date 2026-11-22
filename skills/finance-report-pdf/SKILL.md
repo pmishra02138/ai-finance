@@ -3,7 +3,7 @@ name: finance-report-pdf
 description: Professional PDF financial plan generator. Scans current working directory for FINANCE-*.md files, extracts scores and financial data, then runs the bundled Python ReportLab script to produce a polished, client-ready PDF with cover page, Financial Health Score gauge, score breakdown, cash flow, debt, retirement, portfolio, and prioritized action plan. Output: FINANCE-PLAN.pdf.
 ---
 
-# /finance report-pdf — PDF Financial Plan Generator
+# finance-report-pdf — PDF Financial Plan Generator
 
 **DISCLAIMER: For educational/informational purposes only. Not financial advice.**
 
@@ -13,15 +13,15 @@ Compile all the FINANCE-*.md markdown analyses in the current working directory 
 
 ## When To Trigger
 
-- User types `/finance report-pdf` or `/finance pdf`
+- User types `finance-report-pdf` or `finance-report-pdf`
 - User asks "make a PDF report", "give me a client-ready document", "export my financial plan"
-- After running `/finance analyze` (suggest this as the natural follow-up)
+- After running `finance-analyze` (suggest this as the natural follow-up)
 
 ## Prerequisites
 
 Before generating, ensure the user has at least one analysis file in the current working directory:
 
-- `FINANCE-ANALYSIS.md` (from `/finance analyze`) — primary input
+- `FINANCE-ANALYSIS.md` (from `finance-analyze`) — primary input
 - `FINANCE-BUDGET.md`
 - `FINANCE-DEBT.md`
 - `FINANCE-RETIREMENT.md`
@@ -34,7 +34,7 @@ Before generating, ensure the user has at least one analysis file in the current
 - `FINANCE-FIRE.md`
 - `FINANCE-TAXES.md`
 
-If no files are found, prompt user to first run `/finance analyze` or `/finance quick`.
+If no files are found, prompt user to first run `finance-analyze` or `finance-quick`.
 
 ## Process
 
@@ -173,7 +173,7 @@ The generator produces the following sections:
 
 | Error | Response |
 |-------|----------|
-| No FINANCE-*.md files found | "Run `/finance analyze` or `/finance quick` first to generate input data." |
+| No FINANCE-*.md files found | "Run `finance-analyze` or `finance-quick` first to generate input data." |
 | Python script missing | Generate consolidated `FINANCE-PLAN.md` instead; tell user how to install ReportLab |
 | ReportLab not installed | Instruct: `pip3 install reportlab` |
 | Empty/malformed markdown | Skip that section, generate PDF without it, note in summary |
@@ -183,14 +183,14 @@ The generator produces the following sections:
 
 If the user wants to customize:
 - **Name on cover** — Ask for household name to display
-- **Selective sections** — Allow `/finance report-pdf --sections=debt,retirement` to limit scope
+- **Selective sections** — Allow `finance-report-pdf` (with selective sections such as `debt,retirement`) to limit scope
 - **Branding** — If advisor use, allow logo path injection
 - **Currency** — Default USD; allow override
 
 ## Example Invocation Flow
 
 ```
-User: /finance report-pdf
+User: finance-report-pdf
 
 Agent: Scanning current directory for FINANCE-*.md files...
       Found: FINANCE-ANALYSIS.md, FINANCE-DEBT.md, FINANCE-RETIREMENT.md, FINANCE-BUDGET.md

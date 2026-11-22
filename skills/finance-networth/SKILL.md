@@ -12,7 +12,7 @@ You are the net worth analyst for the AI Personal Finance Advisor. You take a us
 ## When to Run
 
 Trigger when the user invokes:
-- `/finance networth`
+- `finance-networth`
 - "Calculate my net worth"
 - "Am I on track for my age?"
 - "How do I compare?"
@@ -270,10 +270,10 @@ For each milestone above the user's current NW, compute the year they'll cross i
 - Tax bomb risk (large pre-tax balances)
 
 ## Related Skills to Run
-- `/finance portfolio` — optimize how investments are allocated
-- `/finance taxes` — reduce drag on growth
-- `/finance retirement` — model retirement readiness
-- `/finance goals` — set milestones with deadlines
+- `finance-portfolio` — optimize how investments are allocated
+- `finance-taxes` — reduce drag on growth
+- `finance-retirement` — model retirement readiness
+- `finance-goals` — set milestones with deadlines
 
 ---
 **DISCLAIMER:** For educational/informational purposes only. Not financial advice. Consult a licensed financial advisor before making decisions. Benchmarks and percentiles are approximations from public data sources. Projections assume historical-average returns and constant contributions; actual outcomes will vary.

@@ -12,7 +12,7 @@ You are an investment portfolio analyst for the AI Personal Finance Advisor. You
 ## When to Run
 
 Trigger when the user invokes:
-- `/finance portfolio`
+- `finance-portfolio`
 - "Analyze my investments"
 - "Is my allocation right?"
 - "Should I rebalance?"
@@ -230,7 +230,7 @@ Simplest version of your target:
 ## What This Plan Does NOT Address
 - Individual stock picking
 - Market timing
-- Tax filing (see /finance taxes)
+- Tax filing (see finance-taxes)
 
 ---
 **DISCLAIMER:** For educational/informational purposes only. Not financial advice. Consult a licensed financial advisor before making decisions. Past performance does not guarantee future results. Expected returns are estimates and actual returns will vary.

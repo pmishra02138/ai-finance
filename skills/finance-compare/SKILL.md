@@ -3,7 +3,7 @@ name: finance-compare
 description: Side-by-side comparison of two financial scenarios (buy vs rent, new job vs stay, payoff house vs invest, Roth vs Traditional, lease vs buy car, etc). Projects each scenario over 10 years, compares total cost, opportunity cost, risk profile, and produces a structured recommendation. Output saved as FINANCE-COMPARE.md.
 ---
 
-# /finance compare — Side-by-Side Scenario Comparison
+# finance-compare — Side-by-Side Scenario Comparison
 
 **DISCLAIMER: For educational/informational purposes only. Not financial advice.**
 
@@ -13,7 +13,7 @@ Help the user make better financial decisions by modeling two paths side-by-side
 
 ## When To Trigger
 
-- User types `/finance compare <scenario1> <scenario2>`
+- User types `finance-compare <scenario1> <scenario2>`
 - User asks "should I X or Y?" where both are financial choices
 - User is weighing a major decision: housing, job, debt, investing, retirement vehicle, vehicle purchase, education
 

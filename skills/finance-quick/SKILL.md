@@ -3,7 +3,7 @@ name: finance-quick
 description: 60-Second Financial Snapshot — fast assessment of financial health based on six core inputs (income, expenses, savings, debt, age, retirement goal). No subagents. Produces a compact terminal scorecard with savings rate, DTI ratio, emergency fund coverage, retirement on-track status, and top 3 priority actions in under 40 lines.
 ---
 
-# /finance quick — 60-Second Financial Snapshot
+# finance-quick — 60-Second Financial Snapshot
 
 **DISCLAIMER: For educational/informational purposes only. Not financial advice.**
 
@@ -13,9 +13,9 @@ Deliver a high-signal financial health scorecard in under 60 seconds without lau
 
 ## When To Trigger
 
-- User types `/finance quick`
+- User types `finance-quick`
 - User asks "how am I doing financially?", "what's my financial health?", "quick check on my finances"
-- User wants a baseline before deciding to run `/finance analyze`
+- User wants a baseline before deciding to run `finance-analyze`
 
 ## DO NOT Launch Subagents
 
@@ -122,7 +122,7 @@ KEY NUMBER TO IMPROVE FIRST
 [The single metric that will move the score most]
 
 ================================================
-Run `/finance analyze` for full multi-agent analysis
+Run `finance-analyze` for full multi-agent analysis
 DISCLAIMER: For educational/informational purposes
 only. Not financial advice.
 ================================================
@@ -177,7 +177,7 @@ If all four metrics are healthy, surface optimization actions:
 ## Hand-Off
 
 End every snapshot with the line:
-> Run `/finance analyze` for the full 5-agent deep dive, or `/finance debt` / `/finance retirement` for focused work.
+> Run `finance-analyze` for the full 5-agent deep dive, or `finance-debt` / `finance-retirement` for focused work.
 
 ## Tone
 

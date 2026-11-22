@@ -3,7 +3,7 @@ name: finance-screen
 description: Investment screener with pre-built strategies (Dividend Growth, 3-Fund Index, Bond Allocation, REITs, International Diversification, ESG) and custom criteria support. Returns curated ticker lists, allocation models, expected returns, expense ratios, and a recommended portfolio with rebalancing notes. Output saved as FINANCE-SCREEN.md.
 ---
 
-# /finance screen — Investment Screener
+# finance-screen — Investment Screener
 
 **DISCLAIMER: For educational/informational purposes only. Not financial advice. This is not a recommendation to buy any specific security.**
 
@@ -13,7 +13,7 @@ Help the user build or refine an investment portfolio using proven, evidence-bas
 
 ## When To Trigger
 
-- User types `/finance screen <strategy>` or `/finance screen` (then prompts for strategy)
+- User types `finance-screen <strategy>` or `finance-screen` (then prompts for strategy)
 - User asks "what should I invest in?", "build me a portfolio", "what ETFs for X?", "low cost index fund portfolio"
 - User wants to add diversification to existing holdings
 

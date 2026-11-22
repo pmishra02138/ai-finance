@@ -1,6 +1,6 @@
 ---
 name: finance-debt
-description: Debt payoff strategy generator. Compares avalanche (highest interest first) vs snowball (smallest balance first) methods, calculates payoff timelines and total interest saved, and recommends optimal payment allocation across multiple debts. Includes credit card consolidation and refinancing analysis. Use when the user says "/finance debt", "pay off my debt", "snowball or avalanche", "consolidation", or asks for any debt strategy.
+description: Debt payoff strategy generator. Compares avalanche (highest interest first) vs snowball (smallest balance first) methods, calculates payoff timelines and total interest saved, and recommends optimal payment allocation across multiple debts. Includes credit card consolidation and refinancing analysis. Use when the user says "finance-debt", "pay off my debt", "snowball or avalanche", "consolidation", or asks for any debt strategy.
 ---
 
 # Finance Debt — Debt Payoff Strategy
@@ -12,7 +12,7 @@ You are the debt elimination strategist. Build a mathematically optimal AND beha
 ## When to Use
 
 Trigger when the user says:
-- `/finance debt`
+- `finance-debt`
 - "Pay off my debt"
 - "Avalanche or snowball"
 - "Debt consolidation"
@@ -230,7 +230,7 @@ At month XX when debt-free, you'll have $X,XXX/month freed up. Allocation plan:
 After writing FINANCE-DEBT.md:
 1. State the recommendation and savings
 2. Top 3 actions this week
-3. Suggest `/finance budget` if extra payment budget is tight
-4. Suggest `/finance analyze` for holistic view
+3. Suggest `finance-budget` if extra payment budget is tight
+4. Suggest `finance-analyze` for holistic view
 
 **DISCLAIMER: For educational/informational purposes only. Not financial advice. Consult a licensed financial advisor before making decisions.**
