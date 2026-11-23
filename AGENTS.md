@@ -4,8 +4,11 @@
 - `.agents/skills/` — Antigravity (AGY) workspace skill symlinks pointing to `../../finance` and `../../skills/finance-*`.
 - `finance/SKILL.md` — Main orchestrator skill (with YAML frontmatter).
 - `skills/finance-*/SKILL.md` — 14 sub-skills (each must include YAML frontmatter with `name` and `description`).
-- `scripts/generate_finance_pdf.py` — ReportLab PDF generator (`--data <json>` or `--demo`).
-- `scripts/db.py` — SQLite persistence layer (`data/ai_finance.db`) with `users`, `sessions`, and `financial_plans` tables (seeds default user `user` / `password`).
+- `scripts/scoring.py` — Shared pure-stdlib Financial Health Score grading and signal helpers (`score_grade`, `score_signal`).
+- `scripts/calculators/` — Modular deterministic calculation engine for all 14 skills (`__init__.py`, `common.py`, `baseline.py`, `foundation.py`, `growth.py`, `horizons.py`, `synthesis.py`).
+- `scripts/pdf/` — Modular ReportLab 9-page PDF generator (`__init__.py`, `theme.py`, `components.py`, `pages.py`, `demo_data.py`).
+- `scripts/generate_finance_pdf.py` — Thin CLI entrypoint (`--data <json>` or `--demo`) and compatibility shim for `scripts/pdf/`.
+- `scripts/db.py` — SQLite persistence layer (`data/ai_finance.db`) with `users`, `sessions`, `financial_plans`, and `skill_runs` tables (seeds default user `user` / `password`).
 - `scripts/server.py` — Unified single-port FastAPI + Uvicorn server (`http://localhost:8787`) serving both the static frontend (`frontend/public/`) and `/api/*` endpoints (`/api/health`, `/api/auth/*`, `/api/plans/*`, `/api/skills`, `/api/demo`, `/api/demo-data`, `/api/generate`, `/api/docs`).
 - `frontend/public/` — Static SPA frontend (`index.html`, `styles.css`, `app.js`, `skills.js`, `charts.js`) served directly by FastAPI on port `8787`.
 - `bin/start.sh` / `bin/stop.sh` — Unified macOS/Linux single-port launcher & stopper (`8787`), supporting `--local`, `--docker`, and `--restart`.
@@ -16,13 +19,18 @@
 
 ## Coding & Content Conventions
 
+### Modularity & Architecture
+- **Keep modules focused and small:** Proactively split Python or JS files into clean subpackages/modules before they exceed ~400–500 lines or accumulate multiple distinct responsibilities (e.g., routing, business logic, persistence, rendering, and demo data should live in separate modules).
+- **Decouple shared helpers:** Place pure-stdlib shared utilities (like `scripts/scoring.py`) in standalone modules so business logic never depends on heavyweight rendering or framework packages (like ReportLab or FastAPI).
+- **Preserve thin entrypoints:** Keep CLI scripts and server entrypoints thin, delegating implementation to modular packages while maintaining backward-compatible re-exports when refactoring.
+
 ### Skills (`.agents/skills/`, `finance/`, and `skills/finance-*/`)
 - Keep YAML frontmatter (`name`, `description`) at the top of every `SKILL.md`.
 - Use AGY-compatible tool names (`invoke_subagent`, `run_command`) and workspace-relative script paths (`scripts/generate_finance_pdf.py`), never Claude-only `Task` or `~/.claude/` assumptions.
 - Include the educational / not-financial-advice disclaimer in every skill and generated output.
 - Keep command names, file paths, CLI flags, and score-to-grade thresholds consistent with `scripts/generate_finance_pdf.py` and `README.md`.
 
-### Python (`scripts/generate_finance_pdf.py`, `scripts/server.py`)
+### Python (`scripts/scoring.py`, `scripts/calculators/`, `scripts/pdf/`, `scripts/generate_finance_pdf.py`, `scripts/server.py`)
 - Target **Python 3.8+** compatibility and **ReportLab >= 4.0.0**.
 - **XML safety:** Always escape dynamic/user-supplied strings with `xml.sax.saxutils.escape()` before passing them into ReportLab `Paragraph(...)`.
 - **Defensive data handling:** Use `.get()` with sensible defaults, validate input types (e.g., JSON root is a `dict`), and guard against empty lists (such as `investments.allocation` or `debt.accounts`) so charts and tables never raise `ZeroDivisionError` or `KeyError`.
@@ -35,7 +43,7 @@
 
 ## Verification
 After making changes, run the applicable checks before reporting completion:
-- Python syntax: `python3 -m py_compile scripts/generate_finance_pdf.py scripts/server.py`
+- Python syntax: `python3 -m py_compile scripts/*.py scripts/calculators/*.py scripts/pdf/*.py`
 - Shell syntax: `bash -n install.sh uninstall.sh bin/start.sh bin/stop.sh`
 - E2E suite: `uv run python -m unittest discover -s tests -v` (or `python3 -m unittest discover -s tests -v`)
 - Symlinks check: `ls -la .agents/skills/`

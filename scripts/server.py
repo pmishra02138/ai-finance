@@ -53,7 +53,8 @@ if SCRIPT_DIR not in sys.path:
 
 import db as finance_db
 from calculators import run_skill
-from generate_finance_pdf import _demo_data, build_pdf, score_grade, score_signal
+from pdf import _demo_data, build_pdf
+from scoring import score_grade, score_signal
 from skill_registry import VALID_SKILL_NAMES, get_skills_catalog
 
 REPO_ROOT = Path(__file__).resolve().parent.parent

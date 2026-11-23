@@ -89,6 +89,23 @@ class TestSkillRegistryAndCalculators(unittest.TestCase):
         port_res = run_skill("finance-portfolio", {"us_stocks_pct": 50, "intl_stocks_pct": 10, "bonds_pct": 10, "reits_pct": 0, "cash_pct": 0}, demo)
         self.assertIn("sum to 70.0%", port_res["summary"])
 
+    def test_modular_package_exports_and_scoring_consistency(self) -> None:
+        from calculators import baseline, foundation, growth, horizons, synthesis
+        from generate_finance_pdf import _demo_data as shim_demo
+        from generate_finance_pdf import score_grade as shim_grade
+        from generate_finance_pdf import score_signal as shim_signal
+        from pdf.demo_data import _demo_data as pkg_demo
+        from scoring import score_grade, score_signal
+
+        self.assertIs(shim_grade, score_grade)
+        self.assertIs(shim_signal, score_signal)
+        self.assertEqual(shim_demo()["client_name"], pkg_demo()["client_name"])
+        self.assertIs(CALCULATORS["finance-quick"], baseline.calc_quick)
+        self.assertIs(CALCULATORS["finance-debt"], foundation.calc_debt)
+        self.assertIs(CALCULATORS["finance-portfolio"], growth.calc_portfolio)
+        self.assertIs(CALCULATORS["finance-retirement"], horizons.calc_retirement)
+        self.assertIs(CALCULATORS["finance-analyze"], synthesis.calc_analyze)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -113,9 +113,23 @@ ai-finance/
 ├── scripts/
 │   ├── server.py                # Unified single-port FastAPI + static frontend server (8787)
 │   ├── db.py                    # SQLite persistence (users, sessions, financial_plans, skill_runs)
-│   ├── calculators.py           # Deterministic calculation engine for all 14 modules
+│   ├── scoring.py               # Shared score-to-grade and signal helpers (pure stdlib)
 │   ├── skill_registry.py        # 5-stage catalog & user-facing descriptions
-│   └── generate_finance_pdf.py  # ReportLab 9-page PDF generator
+│   ├── generate_finance_pdf.py  # Thin CLI entrypoint for 9-page PDF export
+│   ├── calculators/             # Stage-grouped deterministic calculators (14 modules)
+│   │   ├── __init__.py          # CALCULATORS registry & run_skill() dispatcher
+│   │   ├── common.py            # Shared math, formatting, and compounding helpers
+│   │   ├── baseline.py          # Stage 1: Quick Snapshot, Net Worth
+│   │   ├── foundation.py        # Stage 2: Budget, Emergency Fund, Debt Payoff
+│   │   ├── growth.py            # Stage 3: Portfolio, Screener, Taxes
+│   │   ├── horizons.py          # Stage 4: Retirement, FIRE, Goals, Compare
+│   │   └── synthesis.py         # Stage 5: Full Health Analysis, PDF Readiness
+│   └── pdf/                     # Modular ReportLab 9-page PDF generator
+│       ├── __init__.py          # Package exports (build_pdf, _demo_data)
+│       ├── theme.py             # Palette, paragraph styles, page geometry, footer
+│       ├── components.py        # Gauge, category bars, pie chart, XML escaping
+│       ├── pages.py             # 9 page builders & document assembly
+│       └── demo_data.py         # Internally consistent sample plan payload
 ├── tests/
 │   ├── test_calculators.py      # Unit tests for all 14 calculators
 │   └── test_e2e.py              # Full-stack E2E tests (DB, Auth, API, UI, PDF, installers)
