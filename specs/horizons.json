@@ -35,7 +35,7 @@
         {"key": "annual_expenses", "label": "Expected Annual Expenses ($)", "type": "number", "default": 60000},
         {"key": "current_invested", "label": "Current Invested Portfolio ($)", "type": "number", "default": 184000, "plan_path": "investments.total_value"},
         {"key": "annual_savings", "label": "Annual Savings / Contributions ($)", "type": "number", "default": 24000},
-        {"key": "withdrawal_rate", "label": "Safe Withdrawal Rate (%)", "type": "number", "step": "0.1", "default": 4.0},
+        {"key": "withdrawal_rate", "label": "Safe Withdrawal Rate (SWR, %)", "type": "number", "step": "0.1", "default": 4.0},
         {"key": "expected_real_return", "label": "Expected Real Return (%)", "type": "number", "step": "0.1", "default": 6.0},
         {"key": "current_age", "label": "Current Age", "type": "number", "default": 38, "plan_path": "retirement.current_age"}
       ],

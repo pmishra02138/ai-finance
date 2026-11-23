@@ -183,7 +183,7 @@ def calc_fire(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
     mc_summary = {
         "trials": mc["trials"],
         "volatility_pct": mc["volatility_pct"],
-        "baseline_label": f"Deterministic Regular FI ({swr:.1f}% SWR)",
+        "baseline_label": f"Deterministic Regular FI ({swr:.1f}% Safe Withdrawal Rate)",
         "baseline_value": f"{_money(fi_regular)} ({years_to_fi} yrs)",
         "success_label": f"{mc['drawdown_years']}-Yr Early-Retire Survival",
         "success_rate_pct": mc["success_rate_pct"],
@@ -204,8 +204,8 @@ def calc_fire(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
         "score": round(_clamp(progress), 1),
         "grade": score_grade(_clamp(progress)),
         "summary": (
-            f"Regular FI number ({swr:.1f}% SWR): {_money(fi_regular)} (~{years_to_fi} yrs, age {age + years_to_fi}). "
-            f"Monte Carlo {mc['drawdown_years']}-yr survival rate at that SWR: {mc['success_rate_pct']:.1f}%."
+            f"Regular FI number ({swr:.1f}% Safe Withdrawal Rate / SWR): {_money(fi_regular)} (~{years_to_fi} yrs, age {age + years_to_fi}). "
+            f"Monte Carlo {mc['drawdown_years']}-yr survival rate: {mc['success_rate_pct']:.1f}%."
         ),
         "metrics": [
             {"label": "Regular FI Number", "value": _money(fi_regular), "tone": "neutral"},
@@ -237,9 +237,9 @@ def calc_fire(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
             ],
         },
         "recommendations": [
-            "Every $100/mo cut in recurring expenses reduces your Regular FI target by $30,000 (at 4% SWR).",
+            "Every $100/mo cut in recurring expenses reduces your Regular FI target by $30,000 (at a 4% Safe Withdrawal Rate).",
             (
-                f"At {swr:.1f}% SWR over {mc['drawdown_years']} years, Monte Carlo survival is {mc['success_rate_pct']:.1f}%. "
+                f"At {swr:.1f}% Safe Withdrawal Rate (SWR) over {mc['drawdown_years']} years, Monte Carlo survival is {mc['success_rate_pct']:.1f}%. "
                 "Consider a 3.5% SWR or flexible spending guardrails for multi-decade early retirements."
             ),
         ],
