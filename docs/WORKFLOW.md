@@ -14,11 +14,11 @@ Users can work top-to-bottom or jump to any module. Clicking **Save to My Plan**
 flowchart LR
     Login["Sign In / Register\n(user / password)"] --> SelectPlan["Select or Create\nFinancial Plan"]
 
-    SelectPlan --> S1["Stage 1: Baseline\n• Quick Snapshot\n• Net Worth Tracker"]
-    S1 --> S2["Stage 2: Foundation\n• Budget 50/30/20\n• Emergency Fund\n• Debt Payoff\n• Protection & Estate"]
+    SelectPlan --> S1["Stage 1: Baseline\n• Cash Flow & Budget\n• Net Worth Tracker"]
+    S1 --> S2["Stage 2: Foundation\n• Emergency Fund\n• Debt Payoff\n• Protection & Estate"]
     S2 --> S3["Stage 3: Growth\n• Portfolio Review & Models\n• Tax Optimization"]
-    S3 --> S4["Stage 4: Horizons (MC)\n• Retirement Planner\n• FIRE Calculator\n• Goal Planner\n• Scenario Compare"]
-    S4 --> S5["Stage 5: Synthesis\n• Full Health Analysis\n• Preview / Download PDF"]
+    S3 --> S4["Stage 4: Retirement & Goals\n• Retirement & FI Planner\n• Goals & Trade-Off Scenarios"]
+    S4 --> S5["Stage 5: Action Plan\n• Full Health Analysis\n• Preview / Download PDF"]
 
     S1 -. "Run & Sync" .-> MasterPlan[("Master Plan in SQLite\n(Auto-recalculates Score)")]
     S2 -. "Run & Sync" .-> MasterPlan

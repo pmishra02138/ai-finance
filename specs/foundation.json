@@ -1,24 +1,8 @@
 {
   "id": "foundation",
   "title": "2. Foundation & Defense",
-  "subtitle": "Optimize cash flow, safety net, debt, and protection",
+  "subtitle": "Build your safety net, crush high-APR debt, and audit protection",
   "modules": [
-    {
-      "name": "finance-budget",
-      "label": "Budget & Cash Flow",
-      "engine": "deterministic",
-      "description": "Analyze your monthly take-home pay and spending using the 50/30/20 framework to uncover extra savings.",
-      "fields": [
-        {"key": "monthly_income", "label": "Monthly Take-Home Pay ($)", "type": "number", "default": 9200, "plan_path": "cash_flow.monthly_income"},
-        {"key": "monthly_needs", "label": "Monthly Essential Needs ($)", "type": "number", "default": 4600},
-        {"key": "monthly_wants", "label": "Monthly Discretionary Wants ($)", "type": "number", "default": 1600}
-      ],
-      "constants": {
-        "needs_target_pct": 50.0,
-        "wants_target_pct": 30.0,
-        "savings_target_pct": 20.0
-      }
-    },
     {
       "name": "finance-emergency",
       "label": "Emergency Fund",

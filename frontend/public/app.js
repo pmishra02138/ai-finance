@@ -86,7 +86,7 @@ function renderStageNav() {
   const nav = $("stageNav");
   nav.innerHTML = "";
   const completedCount = Object.keys(state.moduleRuns).length;
-  $("completionPill").textContent = `${completedCount}/${state.catalog.modules.length || 13}`;
+  $("completionPill").textContent = `${completedCount}/${state.catalog.modules.length || 10}`;
 
   for (const stage of state.catalog.stages || []) {
     const group = document.createElement("div");
@@ -322,6 +322,37 @@ async function createNewPlan() {
   showStatus(`Created "${planTitle}".`);
 }
 
+function requestResetPlanConfirmation() {
+  if (!state.activePlanId) return;
+  const activePlan = state.plans.find((p) => p.id === state.activePlanId);
+  const planName = (activePlan && activePlan.title) || "this financial plan";
+  $("resetModalBody").textContent = `This will clear all saved module analyses in "${planName}" and reset it to your chosen starting point.`;
+  $("resetPlanTemplate").value = "blank";
+  $("resetPlanModal").classList.remove("hidden");
+}
+
+function closeResetModal() {
+  $("resetPlanModal").classList.add("hidden");
+}
+
+async function confirmResetActivePlan() {
+  if (!state.activePlanId) return;
+  const template = $("resetPlanTemplate").value || "blank";
+  closeResetModal();
+  const res = await apiFetch(`/plans/${state.activePlanId}/reset`, {
+    method: "POST",
+    body: JSON.stringify({ template }),
+  });
+  if (!res.ok) {
+    showStatus("Failed to reset plan", true);
+    return;
+  }
+  await refreshPlanListOnly();
+  await selectPlan(state.activePlanId);
+  openOverview();
+  showStatus(`Plan reset to ${template === "sample" ? "sample defaults" : "blank"}.`);
+}
+
 function requestDeletePlanConfirmation() {
   if (!state.activePlanId) return;
   const activePlan = state.plans.find((p) => p.id === state.activePlanId);
@@ -454,11 +485,17 @@ async function bootstrap() {
     }
   });
   $("overviewNavBtn").addEventListener("click", openOverview);
+  $("resetPlanBtn").addEventListener("click", requestResetPlanConfirmation);
+  $("resetCancelBtn").addEventListener("click", closeResetModal);
+  $("confirmResetBtn").addEventListener("click", confirmResetActivePlan);
   $("deletePlanBtn").addEventListener("click", requestDeletePlanConfirmation);
   $("confirmCancelBtn").addEventListener("click", closeDeleteModal);
   $("confirmDeleteBtn").addEventListener("click", confirmDeleteActivePlan);
   $("newPlanModal").addEventListener("click", (e) => {
     if (e.target === $("newPlanModal")) closeNewPlanPrompt();
+  });
+  $("resetPlanModal").addEventListener("click", (e) => {
+    if (e.target === $("resetPlanModal")) closeResetModal();
   });
   $("confirmModal").addEventListener("click", (e) => {
     if (e.target === $("confirmModal")) closeDeleteModal();
@@ -466,6 +503,7 @@ async function bootstrap() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       if (!$("confirmModal").classList.contains("hidden")) closeDeleteModal();
+      if (!$("resetPlanModal").classList.contains("hidden")) closeResetModal();
       if (!$("newPlanModal").classList.contains("hidden")) closeNewPlanPrompt();
     }
   });

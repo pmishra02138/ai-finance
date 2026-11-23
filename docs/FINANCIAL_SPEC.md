@@ -46,10 +46,10 @@ Every scored module and the composite Financial Health Score map a `0–100` num
 
 ### Stage 1: Baseline & Triage (`specs/baseline.json` → `calculators/baseline.py`)
 
-#### 1.1 Quick Snapshot (`finance-quick`) — *Deterministic*
-- **Inputs:** Monthly Take-Home Pay, Monthly Expenses, **Liquid Cash & Emergency Savings**, **Invested & Retirement Savings**, Total Debt, Current Age, Target Retirement Age.
-- **Core Math:** Separates liquid cash (used for Reserve Coverage in months) from invested savings (compounded at `6%` real return for retirement projection) so illiquid retirement accounts never overstate emergency liquidity.
-- **Score Protection:** Never overwrites an already-synced detailed 5-pillar `health_score` — only sets `health_score` on brand-new plans without detailed category scores.
+#### 1.1 Cash Flow & Budget (`finance-budget`) — *Deterministic*
+- **Inputs:** Monthly Take-Home Pay, Monthly Essential Needs, Monthly Discretionary Wants, **Liquid Cash & Emergency Savings** (also supports `monthly_expenses` fallback).
+- **Core Math:** 50/30/20 split (`Needs <= 50%`, `Wants <= 30%`, `Savings >= 20%`) plus liquid reserve runway (`Liquid Cash / Monthly Essential Needs`).
+- **Plan Sync:** Updates `categories.cash_flow`, `cash_flow.monthly_income`, `cash_flow.budget_50_30_20`, while preserving any existing itemized `cash_flow.expenses`.
 
 #### 1.2 Net Worth Tracker (`finance-networth`) — *Deterministic*
 - **Inputs:** Cash, Investments & Retirement, Real Estate, Other Assets, Mortgage, Other Debts, Current Age, **Gross Annual Income (Pre-Tax)**.
@@ -60,23 +60,18 @@ Every scored module and the composite Financial Health Score map a `0–100` num
 
 ### Stage 2: Foundation & Defense (`specs/foundation.json` → `calculators/foundation.py`)
 
-#### 2.1 Budget & Cash Flow (`finance-budget`) — *Deterministic*
-- **Inputs:** Monthly Take-Home Pay, Monthly Essential Needs, Monthly Discretionary Wants.
-- **Core Math:** 50/30/20 split (`Needs <= 50%`, `Wants <= 30%`, `Savings >= 20%`).
-- **Plan Sync:** Updates `categories.cash_flow`, `cash_flow.monthly_income`, `cash_flow.budget_50_30_20`, while preserving any existing itemized `cash_flow.expenses`.
-
-#### 2.2 Emergency Fund (`finance-emergency`) — *Deterministic*
+#### 2.1 Emergency Fund (`finance-emergency`) — *Deterministic*
 - **Inputs:** Monthly Essential Expenses, Current Emergency Fund, Monthly Addition, Income Stability (`stable` / `variable` / `high_risk`), Dependents, Self-Employed flag.
 - **Core Math:** Target `3–12` months based on stability (`3/6/9`), `+2` mos for dependents, `+3` mos if self-employed.
 - **Plan Sync:** Updates `protection.emergency_fund_months` (feeding into `Protection & Estate`).
 
-#### 2.3 Debt Payoff (`finance-debt`) — *Deterministic*
+#### 2.2 Debt Payoff (`finance-debt`) — *Deterministic*
 - **Inputs:** Extra Monthly Payment, Debt Accounts (`name`, `balance`, `apr`, `min_payment`).
 - **Core Math:** Month-by-month Avalanche vs. Snowball amortization with minimum-payment rollover.
 - **High-APR vs. Low-APR & Negative Amortization:** Separates high-APR (`> 7%`), mid-APR (`5–7%`), and low-APR (`<= 5%`, e.g., 3% fixed mortgage) debt so low-rate amortized loans aren't unfairly penalized, and flags **Negative Amortization** whenever minimum payments fail to cover monthly interest.
 - **Plan Sync:** Updates `categories.debt` and `debt`.
 
-#### 2.4 Protection & Estate (`finance-protection`) — *Deterministic*
+#### 2.3 Protection & Estate (`finance-protection`) — *Deterministic*
 - **Inputs:** Status (`Good` / `Partial` / `Missing`) for **Term Life Insurance**, **Disability Insurance (LTD)**, **Health Insurance**, **Umbrella / Liability**, **Will, POA & Beneficiaries**, plus **Emergency Fund Coverage (Months)**.
 - **Core Math (Weighted 0–100 Protection Pillar):** Estate Docs `25%` + Disability `20%` + Term Life `18%` + Health `15%` + Emergency Fund `12%` + Umbrella `10%`.
 - **Plan Sync:** Updates `categories.protection` and populates `protection.items` + `protection.commentary` directly for Page 7 of the PDF report.
@@ -101,30 +96,21 @@ Every scored module and the composite Financial Health Score map a `0–100` num
 
 ---
 
-### Stage 4: Horizons & Trade-Offs (`specs/horizons.json` → `calculators/horizons.py`)
+### Stage 4: Retirement & Goals (`specs/horizons.json` → `calculators/horizons.py`)
 
-#### 4.1 Retirement Planner (`finance-retirement`) — *Deterministic + Log-Normal Monte Carlo*
-- **Inputs:** Current Age, Retirement Age, Current Balance, Monthly Contribution, **Monthly Employer 401(k) Match**, Desired After-Tax Annual Spend, **Effective Retirement Tax Rate (%)**, Expected Annual Social Security, **Social Security Start Age**.
-- **Deterministic Baseline:** Grosses up spending for withdrawal taxes (`Net Spend / (1 − Tax Rate)`), adds bridge funding for years between `retirement_age` and `social_security_start_age`, and models `5%` / `6%` / `7%` + `+$200/$400` scenarios including employer match.
+#### 4.1 Retirement & FI Planner (`finance-retirement`) — *Deterministic + Log-Normal Monte Carlo*
+- **Inputs:** Current Age, Retirement Age, Current Balance, Monthly Contribution, **Monthly Employer 401(k) Match**, Desired After-Tax Annual Spend, **Safe Withdrawal Rate (SWR, %)**, **Effective Retirement Tax Rate (%)**, Expected Annual Social Security, **Social Security Start Age**.
+- **Deterministic Baseline & FIRE Milestones:** Grosses up spending for withdrawal taxes (`Net Spend / (1 − Tax Rate)`), adds bridge funding for years between `retirement_age` and `social_security_start_age`, models `5%` / `6%` / `7%` + `+$200/$400` scenarios including employer match, and computes tax-adjusted **Lean (75%)**, **Regular (100%)**, **Fat (150%)**, and **Coast FI** targets + years to FI.
 - **Monte Carlo Stress Test (1,000 trials):** Portfolio-linked log-normal accumulation + dynamic drawdown (`max(25, 95 − Retirement Age)` years) where Social Security begins only at `social_security_start_age`. Retirement score blends deterministic fundedness (`45%`) and Monte Carlo survival (`55%`, capped at `79` if survival `< 80%`).
 - **Plan Sync:** Updates `categories.retirement` and `retirement` (including `monte_carlo` stats for PDF Page 6).
 
-#### 4.2 FIRE Calculator (`finance-fire`) — *Deterministic + Log-Normal Monte Carlo*
-- **Inputs:** Expected After-Tax Annual Expenses, **Effective Tax Rate on Withdrawals (%)**, Current Invested Portfolio, Annual Savings, **Safe Withdrawal Rate (SWR, %)**, Expected Real Return (%), Current Age.
-- **Deterministic Baseline:** Tax-adjusted Lean (75%), Regular (100%), Fat (150%), and Coast FI targets + years to FI.
-- **Monte Carlo Stress Test (1,000 trials):** Portfolio-linked log-normal 40-year early-retirement survival simulation.
-
-#### 4.3 Goal Planner (`finance-goals`) — *Deterministic + Log-Normal Monte Carlo*
-- **Inputs:** Goal Name, Target Amount, Currently Saved, Years Until Goal, Expected Annual Return (%).
-- **Deterministic + MC:** Exact required monthly contribution, an **80% Monte Carlo Confidence Save** solved via binary search, horizon-matched investment vehicle, and 10th/50th/90th percentile ending values.
-
-#### 4.4 Scenario Compare (`finance-compare`) — *Deterministic + Log-Normal Monte Carlo*
-- **Inputs:** Scenario A & B names, upfront costs, monthly costs, monthly investments, **Ending Asset Equity (e.g., Home Equity)**, Horizon (years), Expected Return (%).
-- **Core Math:** `Net Position = Invested FV + Ending Asset Equity − Total Cash Cost`, paired with shared-path log-normal Monte Carlo win probability so Rent vs. Buy comparisons account for home equity fairly.
+#### 4.2 Goals & Trade-Off Scenarios (`finance-goals`) — *Deterministic + Log-Normal Monte Carlo*
+- **Inputs:** Goal Name, Target Amount, Currently Saved, Years Until Goal, Expected Annual Return (%), plus optional **Side-by-Side Trade-Off Comparison (Scenario A vs. B)** with upfront costs, monthly costs, monthly investments, **Ending Asset Equity (e.g., Home Equity)**, Horizon (years), and Expected Return (%).
+- **Deterministic + MC:** Exact required monthly contribution, an **80% Monte Carlo Confidence Save** solved via binary search, horizon-matched investment vehicle, 10th/50th/90th percentile ending values, and when comparison is enabled, `Net Position = Invested FV + Ending Asset Equity − Total Cash Cost` paired with shared-path log-normal Monte Carlo win probability.
 
 ---
 
-### Stage 5: Synthesis & Export (`specs/synthesis.json` → `calculators/synthesis.py`)
+### Stage 5: Action Plan & Export (`specs/synthesis.json` → `calculators/synthesis.py`)
 
 #### 5.1 Full Health Analysis (`finance-analyze`) — *Deterministic*
 - Equal-weighted (`20%` each) composite of all 5 pillars (`Cash Flow`, `Debt`, `Investments`, `Retirement`, `Protection`), read-only and auto-synced from your saved modules.

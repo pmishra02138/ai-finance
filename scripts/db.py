@@ -326,6 +326,34 @@ def delete_plan(user_id: int, plan_id: int, db_path: Optional[str] = None) -> bo
         return cur.rowcount > 0
 
 
+def reset_plan(
+    user_id: int,
+    plan_id: int,
+    health_score: float,
+    grade: str,
+    payload: Dict[str, Any],
+    db_path: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    now = _utc_now()
+    with _connect(db_path) as conn:
+        cur = conn.execute(
+            """
+            UPDATE financial_plans
+            SET health_score = ?, grade = ?, payload_json = ?, updated_at = ?
+            WHERE id = ? AND user_id = ?
+            """,
+            (float(health_score), grade, json.dumps(payload), now, plan_id, user_id),
+        )
+        if cur.rowcount == 0:
+            return None
+        conn.execute(
+            "DELETE FROM module_runs WHERE plan_id = ? AND user_id = ?",
+            (plan_id, user_id),
+        )
+        conn.commit()
+    return get_plan(user_id, plan_id, db_path=db_path)
+
+
 def register_user(
     username: str,
     password: str,

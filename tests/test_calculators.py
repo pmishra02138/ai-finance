@@ -18,10 +18,10 @@ from module_registry import VALID_MODULE_NAMES, get_modules_catalog
 
 
 class TestModuleRegistryAndCalculators(unittest.TestCase):
-    def test_catalog_has_all_13_modules_in_5_stages(self) -> None:
+    def test_catalog_has_all_10_modules_in_5_stages(self) -> None:
         cat = get_modules_catalog()
         self.assertEqual(len(cat["stages"]), 5)
-        self.assertEqual(cat["total_modules"], 13)
+        self.assertEqual(cat["total_modules"], 10)
         self.assertEqual(set(CALCULATORS.keys()), VALID_MODULE_NAMES)
         for mod in cat["modules"]:
             self.assertTrue(mod["description"], f"Missing description for {mod['name']}")
@@ -29,7 +29,7 @@ class TestModuleRegistryAndCalculators(unittest.TestCase):
             self.assertNotIn("subagent", mod["description"].lower())
             self.assertNotIn("/finance", mod["description"].lower())
 
-    def test_all_14_modules_run_with_demo_plan(self) -> None:
+    def test_all_10_modules_run_with_demo_plan(self) -> None:
         demo = _demo_data()
         for module_name in VALID_MODULE_NAMES:
             res = run_module(module_name, {}, demo)
@@ -59,9 +59,7 @@ class TestModuleRegistryAndCalculators(unittest.TestCase):
         )
         self.assertEqual(zero_apr["chart"]["items"][0]["value"], 0.0)
 
-        quick_res = run_module("finance-quick", {"monthly_income": 0, "monthly_expenses": 0, "total_savings": 0, "total_debt": 0}, {})
-        self.assertIsNotNone(quick_res["score"])
-        budget_res = run_module("finance-budget", {"monthly_income": 0, "monthly_needs": 0, "monthly_wants": 0}, {})
+        budget_res = run_module("finance-budget", {"monthly_income": 0, "monthly_needs": 0, "monthly_wants": 0, "liquid_cash": 0}, {})
         self.assertIsNotNone(budget_res["score"])
 
         ret_res = run_module(
@@ -97,7 +95,7 @@ class TestModuleRegistryAndCalculators(unittest.TestCase):
         self.assertIs(shim_grade, score_grade)
         self.assertIs(shim_signal, score_signal)
         self.assertEqual(shim_demo()["client_name"], pkg_demo()["client_name"])
-        self.assertIs(CALCULATORS["finance-quick"], baseline.calc_quick)
+        self.assertIs(CALCULATORS["finance-budget"], baseline.calc_budget)
         self.assertIs(CALCULATORS["finance-debt"], foundation.calc_debt)
         self.assertIs(CALCULATORS["finance-portfolio"], growth.calc_portfolio)
         self.assertIs(CALCULATORS["finance-retirement"], horizons.calc_retirement)
@@ -105,11 +103,10 @@ class TestModuleRegistryAndCalculators(unittest.TestCase):
 
     def test_monte_carlo_stage4_reproducibility_percentiles_and_speed(self) -> None:
         demo = _demo_data()
-        mc_modules = ("finance-retirement", "finance-fire", "finance-goals", "finance-compare")
+        mc_modules = ("finance-retirement", "finance-goals")
         det_modules = (
-            "finance-quick",
-            "finance-networth",
             "finance-budget",
+            "finance-networth",
             "finance-emergency",
             "finance-debt",
             "finance-protection",
@@ -168,10 +165,9 @@ class TestModuleRegistryAndCalculators(unittest.TestCase):
         self.assertEqual(prot_full["score"], 100.0)
         self.assertEqual(len(prot_full["plan_patch"]["protection"]["items"]), 6)
 
-        # 2. Quick Snapshot preserves existing 5-pillar score and separates liquid cash vs invested
-        q_res = run_module("finance-quick", {"liquid_cash": 10000, "invested_savings": 200000, "monthly_expenses": 5000}, demo)
-        self.assertNotIn("health_score", q_res["plan_patch"])
-        self.assertEqual(q_res["metrics"][2]["value"], "2.0 mos")
+        # 2. Cash Flow & Budget computes liquid reserve runway & supports monthly_expenses fallback
+        b_res = run_module("finance-budget", {"liquid_cash": 10000, "monthly_needs": 5000, "monthly_wants": 1000}, demo)
+        self.assertEqual(b_res["metrics"][4]["value"], "2.0 mos")
 
         # 3. High-APR vs Low-APR debt scoring
         low_apr = run_module("finance-debt", {"accounts": [{"name": "Low Loan", "balance": 20000, "apr": 4.0, "min_payment": 300}], "extra_monthly_payment": 0}, {})
@@ -196,10 +192,12 @@ class TestModuleRegistryAndCalculators(unittest.TestCase):
         ret_stock = run_module("finance-retirement", {"employer_match_monthly": 300, "retirement_tax_rate": 15, "social_security_annual": 20000, "social_security_start_age": 67}, stock_plan)
         self.assertLess(ret_bond["monte_carlo"]["volatility_pct"], ret_stock["monte_carlo"]["volatility_pct"])
 
-        # 7. Scenario Compare accounts for ending asset equity (e.g., Home Equity)
-        cmp_no_eq = run_module("finance-compare", {"scenario_a_ending_asset": 0, "scenario_b_ending_asset": 0}, demo)
-        cmp_with_eq = run_module("finance-compare", {"scenario_a_ending_asset": 0, "scenario_b_ending_asset": 500000}, demo)
-        self.assertNotEqual(cmp_no_eq["metrics"][2]["value"], cmp_with_eq["metrics"][2]["value"])
+        # 7. Unified Retirement & FI includes FIRE milestones & Goals & Trade-Off Scenarios accounts for ending asset equity
+        self.assertEqual(len(ret_bond["tables"]), 2)
+        self.assertIn("FIRE", ret_bond["tables"][1]["title"])
+        cmp_no_eq = run_module("finance-goals", {"compare_enabled": True, "scenario_a_ending_asset": 0, "scenario_b_ending_asset": 0}, demo)
+        cmp_with_eq = run_module("finance-goals", {"compare_enabled": True, "scenario_a_ending_asset": 0, "scenario_b_ending_asset": 500000}, demo)
+        self.assertNotEqual(cmp_no_eq["metrics"][5]["value"], cmp_with_eq["metrics"][5]["value"])
 
     def test_financial_audit_fixes(self) -> None:
         demo = _demo_data()

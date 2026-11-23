@@ -54,7 +54,7 @@ class TestStructuredSpecs(unittest.TestCase):
                 self.assertIn("description", mod)
                 self.assertIn("fields", mod)
                 self.assertIn(mod.get("engine"), ("deterministic", "hybrid_monte_carlo"))
-        self.assertEqual(total_modules, 13)
+        self.assertEqual(total_modules, 10)
 
         # Ensure legacy SKILL.md artifacts are completely removed
         self.assertFalse((REPO_ROOT / "skills").exists())
@@ -184,6 +184,13 @@ class TestDatabaseLayer(unittest.TestCase):
             self.assertEqual(updated["title"], "Updated Plan")
             self.assertEqual(updated["grade"], "A+")
 
+            finance_db.upsert_module_run(user_id, created["id"], "finance-budget", {"monthly_income": 9000}, {"score": 88.0}, db_path=db_path)
+            self.assertEqual(len(finance_db.list_module_runs(user_id, created["id"], db_path=db_path)), 1)
+            reset = finance_db.reset_plan(user_id, created["id"], 0.0, "--", {"client_name": "Updated Plan", "health_score": 0}, db_path=db_path)
+            self.assertEqual(reset["health_score"], 0.0)
+            self.assertEqual(reset["grade"], "--")
+            self.assertEqual(len(finance_db.list_module_runs(user_id, created["id"], db_path=db_path)), 0)
+
             self.assertTrue(finance_db.delete_plan(user_id, created["id"], db_path=db_path))
             self.assertIsNone(finance_db.get_plan(user_id, created["id"], db_path=db_path))
 
@@ -257,12 +264,12 @@ class TestLocalhostServerE2E(unittest.TestCase):
                 self.assertNotIn("SQLite", app_js)
                 self.assertNotIn(".md", app_js)
 
-                # 2. /api/modules returns all 13 modules across 5 stages
+                # 2. /api/modules returns all 10 modules across 5 stages
                 with urllib.request.urlopen(f"{base}/api/modules") as resp:
                     self.assertEqual(resp.status, 200)
                     catalog = json.loads(resp.read().decode("utf-8"))
                     self.assertEqual(len(catalog["stages"]), 5)
-                    self.assertEqual(catalog["total_modules"], 13)
+                    self.assertEqual(catalog["total_modules"], 10)
 
                 # 3. User registration works & duplicate returns 409
                 reg_req = urllib.request.Request(

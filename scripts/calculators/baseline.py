@@ -1,101 +1,95 @@
-"""Stage 1 calculators: Baseline & Triage (Quick Snapshot, Net Worth)."""
+"""Stage 1 calculators: Baseline & Triage (Cash Flow & Budget, Net Worth)."""
 
 from __future__ import annotations
 
 from typing import Any, Dict
 
-from .common import _clamp, _f, _fv_monthly, _gross_annual_income, _money, _pct, score_grade, score_signal
+from .common import _clamp, _f, _gross_annual_income, _money, _pct, score_grade
 
 
-def calc_quick(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
+def calc_budget(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
     cf = plan.get("cash_flow") or {}
-    ret = plan.get("retirement") or {}
-    inv = plan.get("investments") or {}
-    debt = plan.get("debt") or {}
-    cats = plan.get("categories") or {}
+    income = _f(inputs.get("monthly_income"), _f(cf.get("monthly_income"), 9200))
+    if "monthly_needs" in inputs or "monthly_wants" in inputs:
+        needs = _f(inputs.get("monthly_needs"), 4600)
+        wants = _f(inputs.get("monthly_wants"), 1600)
+    elif "monthly_expenses" in inputs:
+        total_exp = max(0.0, _f(inputs.get("monthly_expenses"), 6200))
+        needs = total_exp * 0.75
+        wants = total_exp * 0.25
+    else:
+        needs = 4600.0
+        wants = 1600.0
+    liquid_cash = max(0.0, _f(inputs.get("liquid_cash"), 15000))
 
-    default_exp = sum(_f(x[1] if isinstance(x, (list, tuple)) else x.get("amount", 0)) for x in (cf.get("expenses") or []))
-    default_debt = sum(_f(a.get("balance")) for a in (debt.get("accounts") or []))
-
-    income = _f(inputs.get("monthly_income"), _f(cf.get("monthly_income"), 8000))
-    expenses = _f(inputs.get("monthly_expenses"), default_exp or 5500)
-    # Separate liquid cash (reserves) from invested retirement savings; support legacy total_savings fallback
-    legacy_total = inputs.get("total_savings")
-    liquid_cash = _f(inputs.get("liquid_cash"), _f(legacy_total, 15000) if legacy_total is not None else 15000)
-    invested_savings = _f(
-        inputs.get("invested_savings"),
-        _f(legacy_total, _f(inv.get("total_value"), _f(ret.get("current_balance"), 50000)))
-        if legacy_total is not None
-        else _f(inv.get("total_value"), _f(ret.get("current_balance"), 50000)),
-    )
-    total_debt = _f(inputs.get("total_debt"), default_debt)
-    age = int(_f(inputs.get("age"), _f(ret.get("current_age"), 35)))
-    retire_age = int(_f(inputs.get("retirement_age"), _f(ret.get("retirement_age"), 65)))
-
-    surplus = income - expenses
-    savings_rate = (surplus / income * 100.0) if income > 0 else 0.0
-    dti_annual = (total_debt / (income * 12.0) * 100.0) if income > 0 else 0.0
-    ef_months = (liquid_cash / expenses) if expenses > 0 else 0.0
-    years_left = max(0, retire_age - age)
-    projected = _fv_monthly(invested_savings, max(0.0, surplus * 0.5), 0.06, years_left)
-    target = expenses * 12.0 * 25.0
-    on_track_pct = (projected / target * 100.0) if target > 0 else 100.0
+    total_out = needs + wants
+    surplus = income - total_out
+    needs_pct = (needs / income * 100.0) if income > 0 else 0.0
+    wants_pct = (wants / income * 100.0) if income > 0 else 0.0
+    save_pct = (surplus / income * 100.0) if income > 0 else 0.0
+    ef_months = (liquid_cash / needs) if needs > 0 else (liquid_cash / total_out if total_out > 0 else 0.0)
 
     score = _clamp(
-        min(35.0, max(0.0, savings_rate * 1.4))
-        + min(25.0, ef_months * 4.2)
-        + max(0.0, 20.0 - dti_annual * 0.25)
-        + min(20.0, on_track_pct * 0.2)
+        (40.0 if save_pct >= 20 else max(0.0, save_pct * 2.0))
+        + (35.0 if needs_pct <= 50 else max(0.0, 35.0 - (needs_pct - 50.0) * 1.2))
+        + (25.0 if wants_pct <= 30 else max(0.0, 25.0 - (wants_pct - 30.0) * 1.2))
     )
     recs = []
-    if savings_rate < 15:
-        recs.append(f"Raise savings rate from {_pct(savings_rate)} toward 20% (+{_money(max(0, income * 0.20 - surplus))}/mo).")
-    if ef_months < 6:
-        recs.append(f"Build liquid cash reserves from {ef_months:.1f} months to 6 months ({_money(expenses * 6)}).")
-    if total_debt > 0:
-        recs.append(f"Attack {_money(total_debt)} total debt with Avalanche strategy to minimize interest.")
-    if on_track_pct < 100:
-        recs.append(f"Projected retirement balance ({_money(projected)}) is {_pct(on_track_pct, 0)} of 25x target ({_money(target)}).")
+    if needs_pct > 50:
+        recs.append(f"Needs are {_pct(needs_pct)} (target <=50%). Look to trim {_money(needs - income * 0.50)}/mo in fixed bills.")
+    if wants_pct > 30:
+        recs.append(f"Wants are {_pct(wants_pct)} (target <=30%). Trimming {_money(wants - income * 0.30)}/mo boosts savings immediately.")
+    if save_pct < 20:
+        recs.append(f"Savings rate is {_pct(save_pct)}. Automate {_money(max(0.0, income * 0.20 - surplus))}/mo extra into savings/investments.")
+    if ef_months < 3:
+        recs.append(f"Liquid cash covers {ef_months:.1f} months of essential needs; prioritize building reserves in Stage 2.")
     if not recs:
-        recs.append("Strong baseline across savings, liquidity, debt, and retirement trajectory.")
+        recs.append("Cash flow meets or exceeds the 50/30/20 benchmark with healthy liquid reserves.")
 
-    # Never overwrite an already-populated 5-pillar composite score on sync
-    has_detailed_pillars = any(_f(cats.get(k), 0.0) > 0 for k in ("cash_flow", "debt", "investments", "retirement", "protection"))
-    plan_patch: Dict[str, Any] = {
-        "cash_flow": {**cf, "monthly_income": income},
-        "retirement": {**ret, "current_age": age, "retirement_age": retire_age},
-    }
-    if not has_detailed_pillars:
-        plan_patch["health_score"] = round(score, 1)
-        plan_patch["grade"] = score_grade(score)
-        plan_patch["signal"] = score_signal(score)
-    else:
-        recs.append("Your detailed 5-pillar Financial Health Score is preserved; update individual stage modules or Full Health Analysis to change it.")
-
+    existing_expenses = cf.get("expenses") or []
     return {
-        "module": "finance-quick",
+        "module": "finance-budget",
         "score": round(score, 1),
         "grade": score_grade(score),
-        "summary": f"60-Second Triage: Score {round(score)}/100 ({score_grade(score)}) — {score_signal(score)}.",
+        "summary": f"50/30/20 Split (Take-Home): Needs {_pct(needs_pct)} / Wants {_pct(wants_pct)} / Savings {_pct(save_pct)} ({_money(surplus)}/mo surplus, {ef_months:.1f} mos liquid runway).",
         "metrics": [
-            {"label": "Monthly Surplus", "value": _money(surplus), "tone": "good" if surplus >= 0 else "bad"},
-            {"label": "Savings Rate (Net)", "value": _pct(savings_rate), "tone": "good" if savings_rate >= 20 else ("warn" if savings_rate >= 10 else "bad")},
-            {"label": "Liquid Reserve Coverage", "value": f"{ef_months:.1f} mos", "tone": "good" if ef_months >= 6 else ("warn" if ef_months >= 3 else "bad")},
-            {"label": "Debt-to-Net-Income", "value": _pct(dti_annual), "tone": "good" if dti_annual <= 36 else ("warn" if dti_annual <= 60 else "bad")},
-            {"label": "Retirement On-Track", "value": _pct(on_track_pct, 0), "tone": "good" if on_track_pct >= 100 else "warn"},
+            {"label": "Monthly Take-Home", "value": _money(income), "tone": "neutral"},
+            {"label": "Needs (Target <=50%)", "value": f"{_money(needs)} ({_pct(needs_pct)})", "tone": "good" if needs_pct <= 50 else "warn"},
+            {"label": "Wants (Target <=30%)", "value": f"{_money(wants)} ({_pct(wants_pct)})", "tone": "good" if wants_pct <= 30 else "warn"},
+            {"label": "Savings (Target >=20%)", "value": f"{_money(surplus)} ({_pct(save_pct)})", "tone": "good" if save_pct >= 20 else "bad"},
+            {"label": "Liquid Reserve Runway", "value": f"{ef_months:.1f} mos", "tone": "good" if ef_months >= 6 else ("warn" if ef_months >= 3 else "bad")},
         ],
-        "tables": [],
+        "tables": [
+            {
+                "title": "50/30/20 Cash Flow Comparison",
+                "columns": ["Bucket", "Actual ($)", "Actual (%)", "Target ($)", "Variance"],
+                "rows": [
+                    ["Needs", _money(needs), _pct(needs_pct), _money(income * 0.5), _money(needs - income * 0.5)],
+                    ["Wants", _money(wants), _pct(wants_pct), _money(income * 0.3), _money(wants - income * 0.3)],
+                    ["Savings & Extra Debt", _money(surplus), _pct(save_pct), _money(income * 0.2), _money(surplus - income * 0.2)],
+                ],
+            }
+        ],
         "chart": {
-            "type": "bars",
-            "title": "Quick Snapshot Ratios (%)",
+            "type": "donut",
+            "title": "Monthly Cash Flow Allocation",
             "items": [
-                {"label": "Savings Rate", "value": round(_clamp(savings_rate), 1)},
-                {"label": "Retirement Track", "value": round(_clamp(on_track_pct), 1)},
-                {"label": "Triage Score", "value": round(score, 1)},
+                {"label": "Needs", "value": round(max(0.0, needs), 2)},
+                {"label": "Wants", "value": round(max(0.0, wants), 2)},
+                {"label": "Savings", "value": round(max(0.0, surplus), 2)},
             ],
         },
-        "recommendations": recs[:4],
-        "plan_patch": plan_patch,
+        "recommendations": recs,
+        "plan_patch": {
+            "categories": {**(plan.get("categories") or {}), "cash_flow": round(score, 1)},
+            "cash_flow": {
+                **cf,
+                "monthly_income": income,
+                "expenses": existing_expenses if existing_expenses else [("Essential Needs", needs), ("Discretionary Wants", wants)],
+                "budget_50_30_20": {"needs": needs, "wants": wants, "savings": surplus},
+                "commentary": recs[0],
+            },
+        },
     }
 
 

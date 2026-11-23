@@ -19,6 +19,7 @@
       <div class="topbar-plan-switcher">
         <select id="planSelect" class="topbar-plan-select" aria-label="Select Financial Plan"></select>
         <button id="newPlanBtn" class="btn primary sm" type="button">+ New Plan</button>
+        <button id="resetPlanBtn" class="btn ghost sm" type="button" title="Reset active plan">Reset</button>
         <button id="deletePlanBtn" class="btn topbar-danger sm" type="button" title="Delete active plan">Delete</button>
       </div>
       <span class="topbar-divider" aria-hidden="true"></span>
@@ -79,7 +80,7 @@
           <button id="overviewNavBtn" class="overview-nav-btn active" type="button">Plan Overview</button>
           <div class="sidebar-header" style="margin-top:12px;">
             <h2>Planning Modules</h2>
-            <span id="completionPill" class="pill sm">0/13</span>
+            <span id="completionPill" class="pill sm">0/10</span>
           </div>
           <nav id="stageNav" class="stage-nav"></nav>
         </div>
@@ -169,6 +170,25 @@
       <div class="modal-actions">
         <button id="cancelNewPlanBtn" class="btn ghost" type="button">Cancel</button>
         <button id="confirmNewPlanBtn" class="btn primary" type="button">Create Plan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reset Plan Confirmation Modal -->
+  <div id="resetPlanModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
+    <div class="modal-card">
+      <h3 id="resetModalTitle">Reset Financial Plan?</h3>
+      <p id="resetModalBody" class="muted" style="margin-bottom:14px;"></p>
+      <label style="margin-bottom:18px;">
+        Reset To
+        <select id="resetPlanTemplate">
+          <option value="blank">Reset to Blank (empty plan)</option>
+          <option value="sample">Reset to Sample Plan (pre-filled example)</option>
+        </select>
+      </label>
+      <div class="modal-actions">
+        <button id="resetCancelBtn" class="btn ghost" type="button">Cancel</button>
+        <button id="confirmResetBtn" class="btn danger" type="button">Reset Plan</button>
       </div>
     </div>
   </div>

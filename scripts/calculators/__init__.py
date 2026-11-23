@@ -1,5 +1,5 @@
 """
-Hybrid financial calculation engine for all 14 AI Personal Finance modules.
+Hybrid financial calculation engine for all 10 FinPlan modules across 5 stages.
 
 Every calculator takes `(inputs, plan_payload)` and returns a standardized dict:
   {
@@ -19,25 +19,22 @@ from __future__ import annotations
 
 from typing import Any, Callable, Dict
 
-from .baseline import calc_networth, calc_quick
-from .foundation import _simulate_debt_payoff, calc_budget, calc_debt, calc_emergency, calc_protection
+from .baseline import calc_budget, calc_networth
+from .foundation import _simulate_debt_payoff, calc_debt, calc_emergency, calc_protection
 from .growth import SCREEN_STRATEGIES, calc_portfolio, calc_taxes
-from .horizons import calc_compare, calc_fire, calc_goals, calc_retirement
+from .horizons import calc_goals, calc_retirement
 from .synthesis import calc_analyze
 
 CALCULATORS: Dict[str, Callable[[Dict[str, Any], Dict[str, Any]], Dict[str, Any]]] = {
-    "finance-quick": calc_quick,
-    "finance-networth": calc_networth,
     "finance-budget": calc_budget,
+    "finance-networth": calc_networth,
     "finance-emergency": calc_emergency,
     "finance-debt": calc_debt,
     "finance-protection": calc_protection,
     "finance-portfolio": calc_portfolio,
     "finance-taxes": calc_taxes,
     "finance-retirement": calc_retirement,
-    "finance-fire": calc_fire,
     "finance-goals": calc_goals,
-    "finance-compare": calc_compare,
     "finance-analyze": calc_analyze,
 }
 
@@ -54,17 +51,14 @@ __all__ = [
     "SCREEN_STRATEGIES",
     "run_module",
     "_simulate_debt_payoff",
-    "calc_quick",
-    "calc_networth",
     "calc_budget",
+    "calc_networth",
     "calc_emergency",
     "calc_debt",
     "calc_protection",
     "calc_portfolio",
     "calc_taxes",
     "calc_retirement",
-    "calc_fire",
     "calc_goals",
-    "calc_compare",
     "calc_analyze",
 ]

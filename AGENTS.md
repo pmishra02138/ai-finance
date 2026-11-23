@@ -1,12 +1,12 @@
 # AGENTS.md — Project Guidelines for `ai-finance`
 
 ## Repository Structure
-- `docs/FINANCIAL_SPEC.md` — Plain-English human-readable specification of all 5 stages, 14 modules, formulas, 0–100 scoring rules, and Monte Carlo assumptions.
+- `docs/FINANCIAL_SPEC.md` — Plain-English human-readable specification of all 5 stages, 10 modules, formulas, 0–100 scoring rules, and Monte Carlo assumptions.
 - `docs/WORKFLOW.md` — Visual Mermaid diagrams covering the 5-stage user workflow, system architecture, and Run & Sync / PDF request lifecycle.
-- `specs/` — Machine-readable single source of truth for all 5 stages and 14 financial modules (`baseline.json`, `foundation.json`, `growth.json`, `horizons.json`, `synthesis.json`), defining stage layout, UI form schemas, engine modes (`deterministic` vs. `hybrid_monte_carlo`), and domain threshold constants.
+- `specs/` — Machine-readable single source of truth for all 5 stages and 10 financial modules (`baseline.json`, `foundation.json`, `growth.json`, `horizons.json`, `synthesis.json`), defining stage layout, UI form schemas, engine modes (`deterministic` vs. `hybrid_monte_carlo`), and domain threshold constants.
 - `scripts/scoring.py` — Shared pure-stdlib Financial Health Score grading and signal helpers (`score_grade`, `score_signal`).
 - `scripts/module_registry.py` — Loader reading `specs/*.json` for `/api/modules` and calculator domain constants.
-- `scripts/calculators/` — Modular calculation engine for all 14 modules:
+- `scripts/calculators/` — Modular calculation engine for all 10 modules:
   - `__init__.py` (`CALCULATORS`, `run_module`)
   - `common.py` (shared math, formatting, compounding)
   - `monte_carlo.py` (pure-stdlib seeded Monte Carlo simulation engine)

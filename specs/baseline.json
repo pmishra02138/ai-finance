@@ -1,27 +1,24 @@
 {
   "id": "baseline",
   "title": "1. Baseline & Triage",
-  "subtitle": "Capture where you stand today",
+  "subtitle": "Capture cash flow and net worth today",
   "modules": [
     {
-      "name": "finance-quick",
-      "label": "Quick Snapshot",
+      "name": "finance-budget",
+      "label": "Cash Flow & Budget",
       "engine": "deterministic",
-      "description": "Fast 60-second triage using net take-home pay, expenses, liquid cash, invested savings, and debt (preserves detailed 5-pillar scores once synced).",
+      "description": "Capture monthly take-home pay, 50/30/20 spending split, savings rate, and liquid cash runway as your single cash-flow baseline.",
       "fields": [
         {"key": "monthly_income", "label": "Monthly Take-Home Pay ($)", "type": "number", "default": 9200, "plan_path": "cash_flow.monthly_income"},
-        {"key": "monthly_expenses", "label": "Monthly Expenses ($)", "type": "number", "default": 6685, "plan_agg": "sum_expenses"},
-        {"key": "liquid_cash", "label": "Liquid Cash & Emergency Savings ($)", "type": "number", "default": 15000},
-        {"key": "invested_savings", "label": "Invested & Retirement Savings ($)", "type": "number", "default": 184000, "plan_path": "investments.total_value"},
-        {"key": "total_debt", "label": "Total Debt ($)", "type": "number", "default": 41200, "plan_agg": "sum_debt"},
-        {"key": "age", "label": "Current Age", "type": "number", "default": 38, "plan_path": "retirement.current_age"},
-        {"key": "retirement_age", "label": "Target Retirement Age", "type": "number", "default": 65, "plan_path": "retirement.retirement_age"}
+        {"key": "monthly_needs", "label": "Monthly Essential Needs ($)", "type": "number", "default": 4600},
+        {"key": "monthly_wants", "label": "Monthly Discretionary Wants ($)", "type": "number", "default": 1600},
+        {"key": "liquid_cash", "label": "Liquid Cash & Emergency Savings ($)", "type": "number", "default": 15000}
       ],
       "constants": {
-        "target_savings_rate_pct": 20.0,
-        "target_emergency_months": 6.0,
-        "retirement_multiplier": 25.0,
-        "assumed_real_return": 0.06
+        "needs_target_pct": 50.0,
+        "wants_target_pct": 30.0,
+        "savings_target_pct": 20.0,
+        "target_emergency_months": 6.0
       }
     },
     {

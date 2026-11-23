@@ -255,6 +255,45 @@ def update_user_plan(
     return updated
 
 
+class PlanResetRequest(BaseModel):
+    template: str = "blank"
+
+
+@api.post("/plans/{plan_id}/reset")
+def reset_user_plan(
+    plan_id: int,
+    body: PlanResetRequest,
+    user: Dict[str, Any] = Depends(get_current_user),
+) -> Dict[str, Any]:
+    existing = finance_db.get_plan(user["id"], plan_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Plan not found")
+
+    plan_title = existing["title"]
+    if body.template == "sample":
+        raw_payload = {**_demo_data(), "client_name": plan_title}
+    else:
+        raw_payload = {
+            "client_name": plan_title,
+            "health_score": 0,
+            "grade": "--",
+            "signal": "New Plan — Run Modules to Score",
+            "categories": {"cash_flow": 0, "debt": 0, "investments": 0, "retirement": 0, "protection": 0},
+            "cash_flow": {"monthly_income": 0, "gross_annual_income": 0, "expenses": []},
+            "debt": {"accounts": []},
+            "investments": {"total_value": 0, "allocation": []},
+            "retirement": {"current_age": 35, "retirement_age": 65, "current_balance": 0, "target_balance": 0, "monthly_contribution": 0},
+            "protection": {"items": []},
+            "action_items": [],
+        }
+
+    _, score, grade, normalized = _normalize_plan_meta(plan_title, raw_payload)
+    updated = finance_db.reset_plan(user["id"], plan_id, score, grade, normalized)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    return updated
+
+
 @api.delete("/plans/{plan_id}")
 def delete_user_plan(plan_id: int, user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, str]:
     deleted = finance_db.delete_plan(user["id"], plan_id)

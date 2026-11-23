@@ -1,4 +1,4 @@
-"""Stage 2 calculators: Foundation & Defense (Budget, Emergency Fund, Debt Payoff, Protection & Estate)."""
+"""Stage 2 calculators: Foundation & Defense (Emergency Fund, Debt Payoff, Protection & Estate)."""
 
 from __future__ import annotations
 
@@ -84,79 +84,6 @@ def _simulate_debt_payoff(
         for i, d in enumerate(items)
     ]
     return months, round(total_interest, 2), order_rows
-
-
-def calc_budget(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
-    cf = plan.get("cash_flow") or {}
-    income = _f(inputs.get("monthly_income"), _f(cf.get("monthly_income"), 9200))
-    needs = _f(inputs.get("monthly_needs"), 4500)
-    wants = _f(inputs.get("monthly_wants"), 1500)
-
-    total_out = needs + wants
-    surplus = income - total_out
-    needs_pct = (needs / income * 100.0) if income > 0 else 0.0
-    wants_pct = (wants / income * 100.0) if income > 0 else 0.0
-    save_pct = (surplus / income * 100.0) if income > 0 else 0.0
-
-    score = _clamp(
-        (40.0 if save_pct >= 20 else max(0.0, save_pct * 2.0))
-        + (35.0 if needs_pct <= 50 else max(0.0, 35.0 - (needs_pct - 50.0) * 1.2))
-        + (25.0 if wants_pct <= 30 else max(0.0, 25.0 - (wants_pct - 30.0) * 1.2))
-    )
-    recs = []
-    if needs_pct > 50:
-        recs.append(f"Needs are {_pct(needs_pct)} (target <=50%). Look to trim {_money(needs - income * 0.50)}/mo in fixed bills.")
-    if wants_pct > 30:
-        recs.append(f"Wants are {_pct(wants_pct)} (target <=30%). Trimming {_money(wants - income * 0.30)}/mo boosts savings immediately.")
-    if save_pct < 20:
-        recs.append(f"Savings rate is {_pct(save_pct)}. Automate {_money(max(0.0, income * 0.20 - surplus))}/mo extra into savings/investments.")
-    if not recs:
-        recs.append("Budget meets or exceeds the 50/30/20 benchmark.")
-
-    existing_expenses = cf.get("expenses") or []
-    return {
-        "module": "finance-budget",
-        "score": round(score, 1),
-        "grade": score_grade(score),
-        "summary": f"50/30/20 Split (Take-Home): Needs {_pct(needs_pct)} / Wants {_pct(wants_pct)} / Savings {_pct(save_pct)} ({_money(surplus)}/mo surplus).",
-        "metrics": [
-            {"label": "Monthly Take-Home", "value": _money(income), "tone": "neutral"},
-            {"label": "Needs (Target <=50%)", "value": f"{_money(needs)} ({_pct(needs_pct)})", "tone": "good" if needs_pct <= 50 else "warn"},
-            {"label": "Wants (Target <=30%)", "value": f"{_money(wants)} ({_pct(wants_pct)})", "tone": "good" if wants_pct <= 30 else "warn"},
-            {"label": "Savings (Target >=20%)", "value": f"{_money(surplus)} ({_pct(save_pct)})", "tone": "good" if save_pct >= 20 else "bad"},
-        ],
-        "tables": [
-            {
-                "title": "50/30/20 Comparison",
-                "columns": ["Bucket", "Actual ($)", "Actual (%)", "Target ($)", "Variance"],
-                "rows": [
-                    ["Needs", _money(needs), _pct(needs_pct), _money(income * 0.5), _money(needs - income * 0.5)],
-                    ["Wants", _money(wants), _pct(wants_pct), _money(income * 0.3), _money(wants - income * 0.3)],
-                    ["Savings & Extra Debt", _money(surplus), _pct(save_pct), _money(income * 0.2), _money(surplus - income * 0.2)],
-                ],
-            }
-        ],
-        "chart": {
-            "type": "donut",
-            "title": "Monthly Cash Flow Allocation",
-            "items": [
-                {"label": "Needs", "value": round(max(0.0, needs), 2)},
-                {"label": "Wants", "value": round(max(0.0, wants), 2)},
-                {"label": "Savings", "value": round(max(0.0, surplus), 2)},
-            ],
-        },
-        "recommendations": recs,
-        "plan_patch": {
-            "categories": {**(plan.get("categories") or {}), "cash_flow": round(score, 1)},
-            "cash_flow": {
-                **cf,
-                "monthly_income": income,
-                "expenses": existing_expenses if existing_expenses else [("Essential Needs", needs), ("Discretionary Wants", wants)],
-                "budget_50_30_20": {"needs": needs, "wants": wants, "savings": surplus},
-                "commentary": recs[0],
-            },
-        },
-    }
 
 
 def calc_emergency(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
