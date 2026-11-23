@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AI Personal Finance Advisor — Unified Planning Hub</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/styles.css?v=2.2" />
 </head>
 <body>
   <header class="topbar">
@@ -132,28 +132,28 @@
         </div>
 
         <!-- View B: Active Module Workspace -->
-        <div id="skillPanel" class="hidden">
-          <div id="skillHeaderCard" class="card stage-themed">
+        <div id="modulePanel" class="hidden">
+          <div id="moduleHeaderCard" class="card stage-themed">
             <div class="section-head">
               <div>
-                <div id="skillStageKicker" class="kicker"></div>
-                <h2 id="skillHeading" style="margin:2px 0 4px;"></h2>
-                <p id="skillDesc" class="muted" style="margin:0;"></p>
+                <div id="moduleStageKicker" class="kicker"></div>
+                <h2 id="moduleHeading" style="margin:2px 0 4px;"></h2>
+                <p id="moduleDesc" class="muted" style="margin:0;"></p>
               </div>
-              <span id="skillStatusBadge" class="pill hidden"></span>
+              <span id="moduleStatusBadge" class="pill hidden"></span>
             </div>
 
-            <div id="skillFormContainer" style="margin-top:16px;"></div>
+            <div id="moduleFormContainer" style="margin-top:16px;"></div>
 
-            <div class="skill-actions">
-              <button id="runSkillBtn" class="btn primary" type="button">Run Calculator</button>
+            <div class="module-actions">
+              <button id="runModuleBtn" class="btn primary" type="button">Run Calculator</button>
               <button id="runAndSyncBtn" class="btn blue" type="button">Run &amp; Sync to Plan</button>
             </div>
           </div>
 
           <div class="card" style="margin-top:16px;">
             <h3>Analysis Output</h3>
-            <div id="skillResultContainer"></div>
+            <div id="moduleResultContainer"></div>
           </div>
         </div>
       </div>
@@ -178,8 +178,8 @@
     <strong>Disclaimer:</strong> For educational and informational purposes only. This is NOT financial, investment, tax, or legal advice.
   </footer>
 
-  <script src="/charts.js"></script>
-  <script src="/skills.js"></script>
-  <script src="/app.js"></script>
+  <script src="/charts.js?v=2.2"></script>
+  <script src="/modules.js?v=2.2"></script>
+  <script src="/app.js?v=2.2"></script>
 </body>
 </html>

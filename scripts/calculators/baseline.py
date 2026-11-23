@@ -49,7 +49,7 @@ def calc_quick(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
         recs.append("Strong baseline across savings, liquidity, debt, and retirement trajectory.")
 
     return {
-        "skill": "finance-quick",
+        "module": "finance-quick",
         "score": round(score, 1),
         "grade": score_grade(score),
         "summary": f"60-Second Snapshot: Score {round(score)}/100 ({score_grade(score)}) — {score_signal(score)}.",
@@ -115,7 +115,7 @@ def calc_networth(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any
 
     score = _clamp(40.0 + mnd_ratio * 35.0)
     return {
-        "skill": "finance-networth",
+        "module": "finance-networth",
         "score": round(score, 1),
         "grade": score_grade(score),
         "summary": f"Net worth is {_money(net_worth)} ({tier}). Next milestone: {_money(next_ms)} ({_money(ms_gap)} away).",

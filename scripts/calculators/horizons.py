@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import Any, Dict
 
 try:
-    from skill_registry import get_module_constants
+    from module_registry import get_module_constants
 except ImportError:  # pragma: no cover - when imported as scripts.calculators.*
-    from ..skill_registry import get_module_constants
+    from ..module_registry import get_module_constants
 
 from .common import _clamp, _f, _fv_monthly, _money, _pct, score_grade
 from .monte_carlo import (
@@ -97,7 +97,7 @@ def calc_retirement(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, A
         )
 
     return {
-        "skill": "finance-retirement",
+        "module": "finance-retirement",
         "score": round(score, 1),
         "grade": score_grade(score),
         "summary": (
@@ -200,7 +200,7 @@ def calc_fire(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
 
     progress = (current_invested / fi_regular * 100.0) if fi_regular > 0 else 100.0
     return {
-        "skill": "finance-fire",
+        "module": "finance-fire",
         "score": round(_clamp(progress), 1),
         "grade": score_grade(_clamp(progress)),
         "summary": (
@@ -306,7 +306,7 @@ def calc_goals(inputs: Dict[str, Any], _plan: Dict[str, Any]) -> Dict[str, Any]:
 
     pct_done = (current / target * 100.0) if target > 0 else 100.0
     return {
-        "skill": "finance-goals",
+        "module": "finance-goals",
         "score": round(_clamp(pct_done), 1),
         "grade": None,
         "summary": (
@@ -415,7 +415,7 @@ def calc_compare(inputs: Dict[str, Any], _plan: Dict[str, Any]) -> Dict[str, Any
     }
 
     return {
-        "skill": "finance-compare",
+        "module": "finance-compare",
         "score": None,
         "grade": None,
         "summary": (

@@ -2,7 +2,7 @@
 
 > **Human-readable specification** for all 5 stages and 14 financial modules in `ai-finance`.
 >
-> - **Runtime UI & Constants:** Driven by machine-readable `specs/*.json` (served via `/api/skills`).
+> - **Runtime UI & Constants:** Driven by machine-readable `specs/*.json` (served via `/api/modules`).
 > - **Calculation Engine:** Implemented in `scripts/calculators/` and `scripts/scoring.py`.
 > - **How to request changes:** Edit this document (or describe your change in plain English) and ask to sync — the spec, `specs/*.json`, Python calculators, and tests are updated together.
 >

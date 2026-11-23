@@ -215,7 +215,7 @@ input:focus, select:focus, textarea:focus {
 .stage-themed[data-stage="growth"]     { border-top-color: #7c3aed; background: linear-gradient(180deg, #f9f6ff 0%, #ffffff 72px); }
 .stage-themed[data-stage="horizons"]   { border-top-color: #d97706; background: linear-gradient(180deg, #fffcf2 0%, #ffffff 72px); }
 .stage-themed[data-stage="synthesis"]  { border-top-color: #0d9488; background: linear-gradient(180deg, #f2fbf9 0%, #ffffff 72px); }
-.skill-btn {
+.module-btn {
   width: 100%;
   text-align: left;
   background: transparent;
@@ -230,8 +230,8 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   margin-bottom: 3px;
 }
-.skill-btn:hover { background: #f1f5f9; }
-.skill-btn.active {
+.module-btn:hover { background: #f1f5f9; }
+.module-btn.active {
   background: #eff6ff;
   border-color: var(--blue);
   color: var(--blue);
@@ -313,7 +313,7 @@ input:focus, select:focus, textarea:focus {
   gap: 14px;
 }
 
-.skill-actions {
+.module-actions {
   display: flex;
   gap: 10px;
   margin-top: 16px;

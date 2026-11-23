@@ -54,10 +54,10 @@ def get_module_constants(module_name: str) -> Dict[str, Any]:
     return dict(_module_index().get(module_name, {}).get("constants") or {})
 
 
-def get_skills_catalog() -> Dict[str, Any]:
+def get_modules_catalog() -> Dict[str, Any]:
     """Return the 5 stages and all 14 module specs from specs/*.json."""
     stages_out: List[Dict[str, Any]] = []
-    flat_skills: List[Dict[str, Any]] = []
+    flat_modules: List[Dict[str, Any]] = []
 
     for stage in _load_stage_specs():
         enriched: List[Dict[str, Any]] = []
@@ -72,17 +72,17 @@ def get_skills_catalog() -> Dict[str, Any]:
                 "fields": mod.get("fields", []),
             }
             enriched.append(entry)
-            flat_skills.append(entry)
+            flat_modules.append(entry)
         stages_out.append(
             {
                 "id": stage["id"],
                 "title": stage["title"],
                 "subtitle": stage.get("subtitle", ""),
-                "skills": enriched,
+                "modules": enriched,
             }
         )
 
-    return {"stages": stages_out, "skills": flat_skills, "total_skills": len(flat_skills)}
+    return {"stages": stages_out, "modules": flat_modules, "total_modules": len(flat_modules)}
 
 
-VALID_SKILL_NAMES: Set[str] = set(_module_index().keys())
+VALID_MODULE_NAMES: Set[str] = set(_module_index().keys())

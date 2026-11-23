@@ -39,8 +39,8 @@ flowchart TD
     Specs["specs/*.json\n(Stages, Form Fields, IRS Limits, MC Defaults)"]
 
     subgraph Backend ["FastAPI Server — scripts/server.py (:8787)"]
-        Registry["scripts/skill_registry.py\n(/api/skills & Constants)"]
-        Router["REST API Router\n(/api/auth, /api/plans, /api/skills)"]
+        Registry["scripts/module_registry.py\n(/api/modules & Constants)"]
+        Router["REST API Router\n(/api/auth, /api/plans, /api/modules)"]
         DetCalc["Deterministic Calculators\nbaseline.py • foundation.py\ngrowth.py • synthesis.py"]
         MCCalc["Hybrid Monte Carlo Calculators\nhorizons.py + monte_carlo.py\n(1,000 seeded trials)"]
         Scoring["scripts/scoring.py\n(Grade A+..F & Signal)"]
@@ -50,11 +50,11 @@ flowchart TD
 
     subgraph Frontend ["Static SPA — frontend/public/"]
         AppJS["app.js\n(Auth, Plan Switcher, Navigation)"]
-        SkillsJS["skills.js\n(Dynamic Forms + Baseline vs. MC Panel)"]
+        ModulesJS["modules.js\n(Dynamic Forms + Baseline vs. MC Panel)"]
         ChartsJS["charts.js\n(Inline SVG Gauge, Bars, Donuts)"]
     end
 
-    SQLite[("data/ai_finance.db\nusers • sessions • financial_plans • skill_runs")]
+    SQLite[("data/ai_finance.db\nusers • sessions • financial_plans • module_runs")]
     PDFOut["9-Page FINANCE-PLAN.pdf"]
 
     Specs --> Registry
@@ -63,8 +63,8 @@ flowchart TD
 
     Registry --> Router
     AppJS <--> Router
-    SkillsJS <--> Router
-    SkillsJS --> ChartsJS
+    ModulesJS <--> Router
+    ModulesJS --> ChartsJS
 
     Router --> DetCalc
     Router --> MCCalc
@@ -85,20 +85,20 @@ What happens step-by-step when a user runs a Stage 4 module (such as **Retiremen
 ```mermaid
 sequenceDiagram
     actor User
-    participant UI as Browser SPA (skills.js / app.js)
+    participant UI as Browser SPA (modules.js / app.js)
     participant API as FastAPI (scripts/server.py)
     participant Calc as Calculators (horizons.py + monte_carlo.py)
     participant DB as SQLite (scripts/db.py)
     participant PDF as ReportLab (scripts/pdf/pages.py)
 
     User->>UI: Edits Retirement inputs & clicks "Run & Sync to Plan"
-    UI->>API: POST /api/plans/{id}/skills/finance-retirement/run (sync_to_plan=true)
+    UI->>API: POST /api/plans/{id}/modules/finance-retirement/run (sync_to_plan=true)
     API->>DB: Load active financial plan payload
-    API->>Calc: run_skill("finance-retirement", inputs, payload)
+    API->>Calc: run_module("finance-retirement", inputs, payload)
     Calc->>Calc: Compute deterministic 5%/6%/7% baselines
     Calc->>Calc: Run 1,000-trial Monte Carlo (30-yr drawdown, ~20 ms)
     Calc-->>API: Result (metrics, monte_carlo, chart, tables, plan_patch)
-    API->>DB: Upsert skill_runs row
+    API->>DB: Upsert module_runs row
     API->>API: Merge plan_patch & recalculate composite health_score + grade
     API->>DB: Update financial_plans row
     API-->>UI: Return {run, result, updated_plan}

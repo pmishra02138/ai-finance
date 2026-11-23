@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import Any, Dict
 
 try:
-    from skill_registry import get_module_constants
+    from module_registry import get_module_constants
 except ImportError:  # pragma: no cover - when imported as scripts.calculators.*
-    from ..skill_registry import get_module_constants
+    from ..module_registry import get_module_constants
 
 from .common import _clamp, _f, _money, _pct, score_grade
 
@@ -116,7 +116,7 @@ def calc_portfolio(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, An
         recs.insert(0, f"Allocation inputs sum to {total_pct:.1f}% instead of 100.0% — adjust weights so rebalancing trades balance.")
 
     return {
-        "skill": "finance-portfolio",
+        "module": "finance-portfolio",
         "score": round(score, 1),
         "grade": score_grade(score),
         "summary": (
@@ -157,7 +157,7 @@ def calc_screen(inputs: Dict[str, Any], _plan: Dict[str, Any]) -> Dict[str, Any]
         chart_items.append({"label": ticker, "value": w})
 
     return {
-        "skill": "finance-screen",
+        "module": "finance-screen",
         "score": None,
         "grade": None,
         "summary": f"{strat['title']} model — expected {strat['expected_return']}, avg ER {strat['avg_er']}.",
@@ -211,7 +211,7 @@ def calc_taxes(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
     score = _clamp((used_total / avail_total * 100.0) if avail_total > 0 else 80.0)
 
     return {
-        "skill": "finance-taxes",
+        "module": "finance-taxes",
         "score": round(score, 1),
         "grade": score_grade(score),
         "summary": f"Estimated {_money(total_savings)}/yr in untapped tax savings at {_pct(marginal_rate * 100, 0)} marginal bracket.",

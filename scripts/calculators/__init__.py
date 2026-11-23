@@ -1,9 +1,9 @@
 """
-Deterministic financial calculation engine for all 14 AI Personal Finance skills.
+Hybrid financial calculation engine for all 14 AI Personal Finance modules.
 
 Every calculator takes `(inputs, plan_payload)` and returns a standardized dict:
   {
-    "skill": str,
+    "module": str,
     "score": float | None,
     "grade": str | None,
     "summary": str,
@@ -43,17 +43,17 @@ CALCULATORS: Dict[str, Callable[[Dict[str, Any], Dict[str, Any]], Dict[str, Any]
 }
 
 
-def run_skill(skill_name: str, inputs: Dict[str, Any], plan_payload: Dict[str, Any]) -> Dict[str, Any]:
-    fn = CALCULATORS.get(skill_name)
+def run_module(module_name: str, inputs: Dict[str, Any], plan_payload: Dict[str, Any]) -> Dict[str, Any]:
+    fn = CALCULATORS.get(module_name)
     if fn is None:
-        raise KeyError(f"Unknown skill: {skill_name}")
+        raise KeyError(f"Unknown module: {module_name}")
     return fn(inputs or {}, plan_payload or {})
 
 
 __all__ = [
     "CALCULATORS",
     "SCREEN_STRATEGIES",
-    "run_skill",
+    "run_module",
     "_simulate_debt_payoff",
     "calc_quick",
     "calc_networth",

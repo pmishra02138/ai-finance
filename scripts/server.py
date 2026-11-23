@@ -13,15 +13,15 @@ Endpoints:
   POST   /api/auth/register      -> Create new user account
   POST   /api/auth/logout        -> Revoke bearer session token
   GET    /api/auth/me            -> Return authenticated user info
-  GET    /api/skills             -> List 5-stage 14-skill catalog
+  GET    /api/modules            -> List 5-stage 14-module catalog
   GET    /api/plans              -> List user's saved financial plans
   POST   /api/plans              -> Create a new financial plan
   GET    /api/plans/{id}         -> Fetch a single plan
   PUT    /api/plans/{id}         -> Update a plan
   DELETE /api/plans/{id}         -> Delete a plan
   GET    /api/plans/{id}/pdf     -> Generate PDF for a saved plan
-  GET    /api/plans/{id}/skills  -> List saved skill runs for a plan
-  POST   /api/plans/{id}/skills/{name}/run -> Run calculator & optionally sync to plan
+  GET    /api/plans/{id}/modules -> List saved module runs for a plan
+  POST   /api/plans/{id}/modules/{name}/run -> Run calculator & optionally sync to plan
   GET    /api/demo-data          -> Return sample plan JSON
   GET    /api/demo               -> Generate sample PDF
   POST   /api/generate           -> Generate PDF from posted JSON
@@ -52,10 +52,10 @@ if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
 import db as finance_db
-from calculators import run_skill
+from calculators import run_module
+from module_registry import VALID_MODULE_NAMES, get_modules_catalog
 from pdf import _demo_data, build_pdf
 from scoring import score_grade, score_signal
-from skill_registry import VALID_SKILL_NAMES, get_skills_catalog
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 STATIC_DIR = Path(os.environ.get("STATIC_DIR") or (REPO_ROOT / "frontend" / "public")).resolve()
@@ -117,7 +117,7 @@ class PlanUpsertRequest(BaseModel):
     payload: Dict[str, Any]
 
 
-class SkillRunRequest(BaseModel):
+class ModuleRunRequest(BaseModel):
     inputs: Dict[str, Any] = {}
     sync_to_plan: bool = False
 
@@ -215,9 +215,9 @@ def me(user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, Any]:
     return user
 
 
-@api.get("/skills")
-def list_skills() -> Dict[str, Any]:
-    return get_skills_catalog()
+@api.get("/modules")
+def list_modules() -> Dict[str, Any]:
+    return get_modules_catalog()
 
 
 @api.get("/plans")
@@ -284,36 +284,36 @@ def get_user_plan_pdf(
     )
 
 
-@api.get("/plans/{plan_id}/skills")
-def get_plan_skill_runs(
+@api.get("/plans/{plan_id}/modules")
+def get_plan_module_runs(
     plan_id: int,
     user: Dict[str, Any] = Depends(get_current_user),
 ) -> Dict[str, Any]:
     plan = finance_db.get_plan(user["id"], plan_id)
     if plan is None:
         raise HTTPException(status_code=404, detail="Plan not found")
-    runs = finance_db.list_skill_runs(user["id"], plan_id)
-    return {"plan_id": plan_id, "runs": runs, "completed_skills": [r["skill_name"] for r in runs]}
+    runs = finance_db.list_module_runs(user["id"], plan_id)
+    return {"plan_id": plan_id, "runs": runs, "completed_modules": [r["module_name"] for r in runs]}
 
 
-@api.post("/plans/{plan_id}/skills/{skill_name}/run")
-def run_plan_skill(
+@api.post("/plans/{plan_id}/modules/{module_name}/run")
+def run_plan_module(
     plan_id: int,
-    skill_name: str,
-    body: SkillRunRequest,
+    module_name: str,
+    body: ModuleRunRequest,
     user: Dict[str, Any] = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    if skill_name not in VALID_SKILL_NAMES:
-        raise HTTPException(status_code=404, detail=f"Unknown skill '{skill_name}'")
+    if module_name not in VALID_MODULE_NAMES:
+        raise HTTPException(status_code=404, detail=f"Unknown module '{module_name}'")
     plan = finance_db.get_plan(user["id"], plan_id)
     if plan is None:
         raise HTTPException(status_code=404, detail="Plan not found")
 
-    result = run_skill(skill_name, body.inputs, plan["payload"])
-    saved_run = finance_db.upsert_skill_run(
+    result = run_module(module_name, body.inputs, plan["payload"])
+    saved_run = finance_db.upsert_module_run(
         user["id"],
         plan_id,
-        skill_name,
+        module_name,
         body.inputs,
         result,
         score=result.get("score"),
@@ -387,13 +387,13 @@ def serve_frontend(full_path: str) -> Response:
         raise HTTPException(status_code=403, detail="Forbidden")
 
     if candidate.is_file():
-        return FileResponse(candidate)
+        return FileResponse(candidate, headers={"Cache-Control": "no-cache"})
     if "." in Path(rel).name:
         return JSONResponse(status_code=404, content={"detail": "Not Found"})
 
     index_file = STATIC_DIR / "index.html"
     if index_file.is_file():
-        return FileResponse(index_file)
+        return FileResponse(index_file, headers={"Cache-Control": "no-cache"})
     return JSONResponse(status_code=404, content={"detail": "Frontend assets not found"})
 
 

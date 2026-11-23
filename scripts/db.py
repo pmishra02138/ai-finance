@@ -112,21 +112,36 @@ def init_db(db_path: Optional[str] = None, seed_demo_payload: Optional[Dict[str,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             );
 
-            CREATE TABLE IF NOT EXISTS skill_runs (
+            CREATE TABLE IF NOT EXISTS module_runs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 plan_id INTEGER NOT NULL,
                 user_id INTEGER NOT NULL,
-                skill_name TEXT NOT NULL,
+                module_name TEXT NOT NULL,
                 inputs_json TEXT NOT NULL,
                 outputs_json TEXT NOT NULL,
                 score REAL,
                 updated_at TEXT NOT NULL,
-                UNIQUE(plan_id, skill_name),
+                UNIQUE(plan_id, module_name),
                 FOREIGN KEY (plan_id) REFERENCES financial_plans(id) ON DELETE CASCADE,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             );
             """
         )
+
+        # Seamless migration if an older local DB still has the legacy table
+        legacy_tbl = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='skill_runs'"
+        ).fetchone()
+        if legacy_tbl is not None:
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO module_runs
+                    (plan_id, user_id, module_name, inputs_json, outputs_json, score, updated_at)
+                SELECT plan_id, user_id, skill_name, inputs_json, outputs_json, score, updated_at
+                FROM skill_runs
+                """
+            )
+            conn.execute("DROP TABLE skill_runs;")
 
         cols = {r["name"] for r in conn.execute("PRAGMA table_info(sessions)").fetchall()}
         if "expires_at" not in cols:
@@ -364,10 +379,10 @@ def register_user(
         return {"token": token, "user": {"id": user_id, "username": clean_user}}
 
 
-def upsert_skill_run(
+def upsert_module_run(
     user_id: int,
     plan_id: int,
-    skill_name: str,
+    module_name: str,
     inputs: Dict[str, Any],
     outputs: Dict[str, Any],
     score: Optional[float] = None,
@@ -377,20 +392,20 @@ def upsert_skill_run(
     with _connect(db_path) as conn:
         conn.execute(
             """
-            INSERT INTO skill_runs (plan_id, user_id, skill_name, inputs_json, outputs_json, score, updated_at)
+            INSERT INTO module_runs (plan_id, user_id, module_name, inputs_json, outputs_json, score, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(plan_id, skill_name) DO UPDATE SET
+            ON CONFLICT(plan_id, module_name) DO UPDATE SET
                 inputs_json = excluded.inputs_json,
                 outputs_json = excluded.outputs_json,
                 score = excluded.score,
                 updated_at = excluded.updated_at
             """,
-            (plan_id, user_id, skill_name, json.dumps(inputs), json.dumps(outputs), score, now),
+            (plan_id, user_id, module_name, json.dumps(inputs), json.dumps(outputs), score, now),
         )
         conn.commit()
     return {
         "plan_id": plan_id,
-        "skill_name": skill_name,
+        "module_name": module_name,
         "inputs": inputs,
         "outputs": outputs,
         "score": score,
@@ -398,12 +413,12 @@ def upsert_skill_run(
     }
 
 
-def list_skill_runs(user_id: int, plan_id: int, db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+def list_module_runs(user_id: int, plan_id: int, db_path: Optional[str] = None) -> List[Dict[str, Any]]:
     with _connect(db_path) as conn:
         rows = conn.execute(
             """
-            SELECT id, plan_id, skill_name, inputs_json, outputs_json, score, updated_at
-            FROM skill_runs
+            SELECT id, plan_id, module_name, inputs_json, outputs_json, score, updated_at
+            FROM module_runs
             WHERE user_id = ? AND plan_id = ?
             ORDER BY updated_at DESC
             """,
@@ -418,20 +433,20 @@ def list_skill_runs(user_id: int, plan_id: int, db_path: Optional[str] = None) -
         return result
 
 
-def get_skill_run(
+def get_module_run(
     user_id: int,
     plan_id: int,
-    skill_name: str,
+    module_name: str,
     db_path: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     with _connect(db_path) as conn:
         row = conn.execute(
             """
-            SELECT id, plan_id, skill_name, inputs_json, outputs_json, score, updated_at
-            FROM skill_runs
-            WHERE user_id = ? AND plan_id = ? AND skill_name = ?
+            SELECT id, plan_id, module_name, inputs_json, outputs_json, score, updated_at
+            FROM module_runs
+            WHERE user_id = ? AND plan_id = ? AND module_name = ?
             """,
-            (user_id, plan_id, skill_name),
+            (user_id, plan_id, module_name),
         ).fetchone()
         if row is None:
             return None

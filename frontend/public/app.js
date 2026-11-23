@@ -4,9 +4,9 @@ const state = {
   plans: [],
   activePlanId: null,
   activePayload: null,
-  catalog: { stages: [], skills: [] },
-  skillRuns: {},
-  activeSkillName: null, // null = Overview/JSON view
+  catalog: { stages: [], modules: [] },
+  moduleRuns: {},
+  activeModuleName: null, // null = Overview view
 };
 
 const $ = (id) => document.getElementById(id);
@@ -87,8 +87,8 @@ function renderPlanHeader() {
 function renderStageNav() {
   const nav = $("stageNav");
   nav.innerHTML = "";
-  const completedCount = Object.keys(state.skillRuns).length;
-  $("completionPill").textContent = `${completedCount}/${state.catalog.skills.length || 14}`;
+  const completedCount = Object.keys(state.moduleRuns).length;
+  $("completionPill").textContent = `${completedCount}/${state.catalog.modules.length || 14}`;
 
   for (const stage of state.catalog.stages || []) {
     const group = document.createElement("div");
@@ -99,15 +99,15 @@ function renderStageNav() {
     title.textContent = stage.title;
     group.appendChild(title);
 
-    for (const sk of stage.skills) {
+    for (const mod of stage.modules) {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "skill-btn" + (state.activeSkillName === sk.name ? " active" : "");
-      const done = Boolean(state.skillRuns[sk.name]);
-      btn.innerHTML = `<span>${window.FinanceCharts.escapeHtml(sk.label)}</span>${
+      btn.className = "module-btn" + (state.activeModuleName === mod.name ? " active" : "");
+      const done = Boolean(state.moduleRuns[mod.name]);
+      btn.innerHTML = `<span>${window.FinanceCharts.escapeHtml(mod.label)}</span>${
         done ? '<span class="check-dot" title="Completed">✓</span>' : '<span class="pending-dot">○</span>'
       }`;
-      btn.addEventListener("click", () => openSkill(sk.name));
+      btn.addEventListener("click", () => openModule(mod.name));
       group.appendChild(btn);
     }
     nav.appendChild(group);
@@ -115,15 +115,15 @@ function renderStageNav() {
 }
 
 function openOverview() {
-  state.activeSkillName = null;
+  state.activeModuleName = null;
   $("overviewPanel").classList.remove("hidden");
-  $("skillPanel").classList.add("hidden");
+  $("modulePanel").classList.add("hidden");
   renderPlanHeader();
   renderStageNav();
 }
 
-function setSkillStatusBadge(label) {
-  const badge = $("skillStatusBadge");
+function setModuleStatusBadge(label) {
+  const badge = $("moduleStatusBadge");
   if (!label) {
     badge.innerHTML = "";
     badge.classList.add("hidden");
@@ -134,32 +134,32 @@ function setSkillStatusBadge(label) {
   badge.classList.remove("hidden");
 }
 
-function openSkill(skillName) {
-  const meta = (state.catalog.skills || []).find((s) => s.name === skillName);
+function openModule(moduleName) {
+  const meta = (state.catalog.modules || []).find((m) => m.name === moduleName);
   if (!meta) return;
-  state.activeSkillName = skillName;
+  state.activeModuleName = moduleName;
   $("overviewPanel").classList.add("hidden");
-  $("skillPanel").classList.remove("hidden");
-  $("skillHeaderCard").dataset.stage = meta.stage_id;
+  $("modulePanel").classList.remove("hidden");
+  $("moduleHeaderCard").dataset.stage = meta.stage_id;
 
-  $("skillStageKicker").textContent = meta.stage_title;
-  $("skillHeading").textContent = meta.label;
-  $("skillDesc").textContent = meta.description;
+  $("moduleStageKicker").textContent = meta.stage_title;
+  $("moduleHeading").textContent = meta.label;
+  $("moduleDesc").textContent = meta.description;
 
-  const saved = state.skillRuns[skillName];
-  setSkillStatusBadge(saved ? "Saved" : "");
+  const saved = state.moduleRuns[moduleName];
+  setModuleStatusBadge(saved ? "Saved" : "");
 
-  const fields = window.FinanceSkills.getFields(meta, state.activePayload, saved && saved.inputs);
-  window.FinanceSkills.renderForm($("skillFormContainer"), fields);
-  window.FinanceSkills.renderResult($("skillResultContainer"), saved && saved.outputs);
+  const fields = window.FinanceModules.getFields(meta, state.activePayload, saved && saved.inputs);
+  window.FinanceModules.renderForm($("moduleFormContainer"), fields);
+  window.FinanceModules.renderResult($("moduleResultContainer"), saved && saved.outputs);
   renderStageNav();
 }
 
-async function executeActiveSkill(syncToPlan) {
-  if (!state.activePlanId || !state.activeSkillName) return;
+async function executeActiveModule(syncToPlan) {
+  if (!state.activePlanId || !state.activeModuleName) return;
   try {
-    const inputs = window.FinanceSkills.readForm($("skillFormContainer"));
-    const res = await apiFetch(`/plans/${state.activePlanId}/skills/${state.activeSkillName}/run`, {
+    const inputs = window.FinanceModules.readForm($("moduleFormContainer"));
+    const res = await apiFetch(`/plans/${state.activePlanId}/modules/${state.activeModuleName}/run`, {
       method: "POST",
       body: JSON.stringify({ inputs, sync_to_plan: syncToPlan }),
     });
@@ -169,14 +169,14 @@ async function executeActiveSkill(syncToPlan) {
       return;
     }
     const data = await res.json();
-    state.skillRuns[state.activeSkillName] = data.run;
+    state.moduleRuns[state.activeModuleName] = data.run;
     if (data.updated_plan) {
       state.activePayload = data.updated_plan.payload;
       await refreshPlanListOnly();
       renderPlanHeader();
     }
-    setSkillStatusBadge(syncToPlan ? "Analysis complete & plan updated" : "Analysis saved");
-    window.FinanceSkills.renderResult($("skillResultContainer"), data.result);
+    setModuleStatusBadge(syncToPlan ? "Analysis complete & plan updated" : "Analysis saved");
+    window.FinanceModules.renderResult($("moduleResultContainer"), data.result);
     renderStageNav();
   } catch (err) {
     showStatus(`Input or network error: ${err.message}`, true);
@@ -206,7 +206,7 @@ async function refreshPlanListOnly() {
 async function selectPlan(planId) {
   const [planRes, runsRes] = await Promise.all([
     apiFetch(`/plans/${planId}`),
-    apiFetch(`/plans/${planId}/skills`),
+    apiFetch(`/plans/${planId}/modules`),
   ]);
   if (!planRes.ok) {
     showStatus("Failed to load plan", true);
@@ -215,26 +215,26 @@ async function selectPlan(planId) {
   const plan = await planRes.json();
   state.activePlanId = plan.id;
   state.activePayload = plan.payload;
-  state.skillRuns = {};
+  state.moduleRuns = {};
   if (runsRes.ok) {
     const runsData = await runsRes.json();
     for (const r of runsData.runs || []) {
-      state.skillRuns[r.skill_name] = r;
+      state.moduleRuns[r.module_name] = r;
     }
   }
   renderPlanSelect();
   renderPlanHeader();
-  if (state.activeSkillName) {
-    openSkill(state.activeSkillName);
+  if (state.activeModuleName) {
+    openModule(state.activeModuleName);
   } else {
     renderStageNav();
   }
 }
 
 async function loadInitialAppData() {
-  const [skillsRes, plansRes] = await Promise.all([apiFetch("/skills"), apiFetch("/plans")]);
-  if (skillsRes.ok) {
-    state.catalog = await skillsRes.json();
+  const [modulesRes, plansRes] = await Promise.all([apiFetch("/modules"), apiFetch("/plans")]);
+  if (modulesRes.ok) {
+    state.catalog = await modulesRes.json();
   }
   if (plansRes.ok) {
     const data = await plansRes.json();
@@ -369,7 +369,7 @@ async function handleSignOut(callApi = true) {
   state.user = null;
   state.plans = [];
   state.activePlanId = null;
-  state.skillRuns = {};
+  state.moduleRuns = {};
   localStorage.removeItem("ai_finance_token");
   $("loginView").classList.remove("hidden");
   $("appView").classList.add("hidden");
@@ -431,8 +431,8 @@ async function bootstrap() {
       closeDeleteModal();
     }
   });
-  $("runSkillBtn").addEventListener("click", () => executeActiveSkill(false));
-  $("runAndSyncBtn").addEventListener("click", () => executeActiveSkill(true));
+  $("runModuleBtn").addEventListener("click", () => executeActiveModule(false));
+  $("runAndSyncBtn").addEventListener("click", () => executeActiveModule(true));
   $("previewPdfBtn").addEventListener("click", () => fetchPdf(true));
   $("downloadPdfBtn").addEventListener("click", () => fetchPdf(false));
 

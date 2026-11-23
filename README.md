@@ -109,15 +109,15 @@ ai-finance/
 │   ├── growth.json              # Stage 3 specs (incl. IRS limits)
 │   ├── horizons.json            # Stage 4 specs (incl. Monte Carlo defaults)
 │   └── synthesis.json           # Stage 5 specs
-├── frontend/public/             # Spec-driven static SPA (index.html, styles.css, app.js, skills.js, charts.js)
+├── frontend/public/             # Spec-driven static SPA (index.html, styles.css, app.js, modules.js, charts.js)
 ├── scripts/
 │   ├── server.py                # Unified single-port FastAPI + static frontend server (8787)
-│   ├── db.py                    # SQLite persistence (users, sessions, financial_plans, skill_runs)
+│   ├── db.py                    # SQLite persistence (users, sessions, financial_plans, module_runs)
 │   ├── scoring.py               # Shared score-to-grade and signal helpers (pure stdlib)
-│   ├── skill_registry.py        # Loader reading specs/*.json for API & calculators
+│   ├── module_registry.py       # Loader reading specs/*.json for API & calculators
 │   ├── generate_finance_pdf.py  # Thin CLI entrypoint for 9-page PDF export
 │   ├── calculators/             # Stage-grouped calculation engine (14 modules)
-│   │   ├── __init__.py          # CALCULATORS registry & run_skill() dispatcher
+│   │   ├── __init__.py          # CALCULATORS registry & run_module() dispatcher
 │   │   ├── common.py            # Shared math, formatting, and compounding helpers
 │   │   ├── monte_carlo.py       # Pure-stdlib seeded Monte Carlo simulation engine
 │   │   ├── baseline.py          # Stage 1: Quick Snapshot, Net Worth

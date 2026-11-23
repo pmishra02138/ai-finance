@@ -117,7 +117,7 @@ def calc_budget(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
 
     existing_expenses = cf.get("expenses") or []
     return {
-        "skill": "finance-budget",
+        "module": "finance-budget",
         "score": round(score, 1),
         "grade": score_grade(score),
         "summary": f"50/30/20 Split: Needs {_pct(needs_pct)} / Wants {_pct(wants_pct)} / Savings {_pct(save_pct)} ({_money(surplus)}/mo surplus).",
@@ -188,7 +188,7 @@ def calc_emergency(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, An
     score = _clamp(pct_funded)
 
     return {
-        "skill": "finance-emergency",
+        "module": "finance-emergency",
         "score": round(score, 1),
         "grade": score_grade(score),
         "summary": f"Emergency fund covers {months_covered:.1f} of {target_months} recommended months ({_money(current_ef)} / {_money(target_amount)}).",
@@ -248,7 +248,7 @@ def calc_debt(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
         score = _clamp(95.0 - weighted_apr * 2.2 - min(35.0, av_months * 0.45))
 
     return {
-        "skill": "finance-debt",
+        "module": "finance-debt",
         "score": round(score, 1),
         "grade": score_grade(score),
         "summary": (

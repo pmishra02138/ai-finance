@@ -1,6 +1,6 @@
 /* Spec-driven form builder & result renderer (Deterministic + Monte Carlo) */
 
-window.FinanceSkills = (function () {
+window.FinanceModules = (function () {
   const esc = (s) => window.FinanceCharts.escapeHtml(s);
 
   function sumExpenses(plan) {
@@ -40,8 +40,8 @@ window.FinanceSkills = (function () {
     return specField.default;
   }
 
-  function getFields(skillMeta, plan, savedInputs) {
-    const specFields = (skillMeta && Array.isArray(skillMeta.fields) ? skillMeta.fields : []) || [];
+  function getFields(moduleMeta, plan, savedInputs) {
+    const specFields = (moduleMeta && Array.isArray(moduleMeta.fields) ? moduleMeta.fields : []) || [];
     return specFields.map((f) => {
       const baseVal = resolveFieldDefault(f, plan || {});
       const hasSaved = savedInputs && savedInputs[f.key] !== undefined;
@@ -72,7 +72,7 @@ window.FinanceSkills = (function () {
     }
     const html = fields
       .map((f) => {
-        const id = `skill_field_${f.key}`;
+        const id = `module_field_${f.key}`;
         if (f.type === "select") {
           const opts = (f.options || [])
             .map((o) => `<option value="${esc(o.value)}" ${o.value === f.value ? "selected" : ""}>${esc(o.label)}</option>`)

@@ -1,7 +1,7 @@
 [project]
 name = "ai-finance"
 version = "0.1.0"
-description = "AI Personal Finance Advisor — AGY skills, ReportLab PDF generator, and FastAPI localhost service"
+description = "AI Personal Finance Advisor — Spec-driven FastAPI web app, Hybrid Monte Carlo engine, and ReportLab PDF generator"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

@@ -5,18 +5,18 @@
 - `docs/WORKFLOW.md` — Visual Mermaid diagrams covering the 5-stage user workflow, system architecture, and Run & Sync / PDF request lifecycle.
 - `specs/` — Machine-readable single source of truth for all 5 stages and 14 financial modules (`baseline.json`, `foundation.json`, `growth.json`, `horizons.json`, `synthesis.json`), defining stage layout, UI form schemas, engine modes (`deterministic` vs. `hybrid_monte_carlo`), and domain threshold constants.
 - `scripts/scoring.py` — Shared pure-stdlib Financial Health Score grading and signal helpers (`score_grade`, `score_signal`).
-- `scripts/skill_registry.py` — Loader reading `specs/*.json` for `/api/skills` and calculator domain constants.
+- `scripts/module_registry.py` — Loader reading `specs/*.json` for `/api/modules` and calculator domain constants.
 - `scripts/calculators/` — Modular calculation engine for all 14 modules:
-  - `__init__.py` (`CALCULATORS`, `run_skill`)
+  - `__init__.py` (`CALCULATORS`, `run_module`)
   - `common.py` (shared math, formatting, compounding)
   - `monte_carlo.py` (pure-stdlib seeded Monte Carlo simulation engine)
   - `baseline.py`, `foundation.py`, `growth.py`, `synthesis.py` (deterministic calculators)
   - `horizons.py` (hybrid deterministic baseline + Monte Carlo calculators)
 - `scripts/pdf/` — Modular ReportLab 9-page PDF generator (`__init__.py`, `theme.py`, `components.py`, `pages.py`, `demo_data.py`).
 - `scripts/generate_finance_pdf.py` — Thin CLI entrypoint (`--data <json>` or `--demo`) and compatibility shim for `scripts/pdf/`.
-- `scripts/db.py` — SQLite persistence layer (`data/ai_finance.db`) with `users`, `sessions`, `financial_plans`, and `skill_runs` tables (seeds default user `user` / `password`).
-- `scripts/server.py` — Unified single-port FastAPI + Uvicorn server (`http://localhost:8787`) serving both the static frontend (`frontend/public/`) and `/api/*` endpoints (`/api/health`, `/api/auth/*`, `/api/plans/*`, `/api/skills`, `/api/demo`, `/api/demo-data`, `/api/generate`, `/api/docs`).
-- `frontend/public/` — Spec-driven static SPA frontend (`index.html`, `styles.css`, `app.js`, `skills.js`, `charts.js`) served directly by FastAPI on port `8787`.
+- `scripts/db.py` — SQLite persistence layer (`data/ai_finance.db`) with `users`, `sessions`, `financial_plans`, and `module_runs` tables (seeds default user `user` / `password`).
+- `scripts/server.py` — Unified single-port FastAPI + Uvicorn server (`http://localhost:8787`) serving both the static frontend (`frontend/public/`) and `/api/*` endpoints (`/api/health`, `/api/auth/*`, `/api/plans/*`, `/api/modules`, `/api/demo`, `/api/demo-data`, `/api/generate`, `/api/docs`).
+- `frontend/public/` — Spec-driven static SPA frontend (`index.html`, `styles.css`, `app.js`, `modules.js`, `charts.js`) served directly by FastAPI on port `8787`.
 - `bin/start.sh` / `bin/stop.sh` — Unified macOS/Linux single-port launcher & stopper (`8787`), supporting `--local`, `--docker`, and `--restart`.
 - `bin/start.ps1` / `bin/stop.ps1` — Unified Windows PowerShell single-port launcher & stopper (`-Docker`, `-Restart`, `-Port`).
 - `Dockerfile`, `docker-compose.yml`, `.dockerignore` — Single-container non-root Docker setup on port `8787` for macOS/Linux/Windows.
@@ -49,7 +49,7 @@
 After making changes, run the applicable checks before reporting completion:
 - Python syntax: `python3 -m py_compile scripts/*.py scripts/calculators/*.py scripts/pdf/*.py tests/*.py`
 - Shell syntax: `bash -n bin/start.sh bin/stop.sh`
-- JS syntax: `node --check frontend/public/app.js && node --check frontend/public/skills.js && node --check frontend/public/charts.js`
+- JS syntax: `node --check frontend/public/app.js && node --check frontend/public/modules.js && node --check frontend/public/charts.js`
 - Full test suite: `uv run --no-sync python -m unittest discover -s tests -v`
 - PDF smoke test: `uv run --no-sync python scripts/generate_finance_pdf.py --demo --output /tmp/FINANCE-PLAN-sample.pdf`
 - Docker smoke test (if Docker is running): `docker compose up -d --build app && curl -sf http://localhost:8787/api/health`

@@ -242,7 +242,7 @@ class TestLocalhostServerE2E(unittest.TestCase):
                     ("/", "AI Personal Finance Advisor"),
                     ("/styles.css", ".topbar"),
                     ("/charts.js", "FinanceCharts"),
-                    ("/skills.js", "FinanceSkills"),
+                    ("/modules.js", "FinanceModules"),
                     ("/app.js", "/auth/login"),
                 ):
                     with urllib.request.urlopen(f"{base}{asset}") as resp:
@@ -255,15 +255,14 @@ class TestLocalhostServerE2E(unittest.TestCase):
 
                 app_js = (REPO_ROOT / "frontend" / "public" / "app.js").read_text(encoding="utf-8")
                 self.assertNotIn("SQLite", app_js)
-                self.assertNotIn("skill history", app_js)
                 self.assertNotIn(".md", app_js)
 
-                # 2. /api/skills returns all 14 skills across 5 stages
-                with urllib.request.urlopen(f"{base}/api/skills") as resp:
+                # 2. /api/modules returns all 14 modules across 5 stages
+                with urllib.request.urlopen(f"{base}/api/modules") as resp:
                     self.assertEqual(resp.status, 200)
                     catalog = json.loads(resp.read().decode("utf-8"))
                     self.assertEqual(len(catalog["stages"]), 5)
-                    self.assertEqual(catalog["total_skills"], 14)
+                    self.assertEqual(catalog["total_modules"], 14)
 
                 # 3. User registration works & duplicate returns 409
                 reg_req = urllib.request.Request(
@@ -347,11 +346,11 @@ class TestLocalhostServerE2E(unittest.TestCase):
                     self.assertEqual(resp.status, 200)
                     self.assertEqual(json.loads(resp.read().decode("utf-8"))["grade"], "A+")
 
-                for sk in catalog["skills"]:
-                    self.assertIn("fields", sk)
-                    self.assertIn("engine", sk)
+                for mod in catalog["modules"]:
+                    self.assertIn("fields", mod)
+                    self.assertIn("engine", mod)
                     run_req = urllib.request.Request(
-                        f"{base}/api/plans/{plan_id}/skills/{sk['name']}/run",
+                        f"{base}/api/plans/{plan_id}/modules/{mod['name']}/run",
                         data=json.dumps({"inputs": {}, "sync_to_plan": True}).encode("utf-8"),
                         headers=auth_headers,
                         method="POST",
@@ -359,14 +358,14 @@ class TestLocalhostServerE2E(unittest.TestCase):
                     with urllib.request.urlopen(run_req) as resp:
                         self.assertEqual(resp.status, 200)
                         run_body = json.loads(resp.read().decode("utf-8"))
-                        self.assertEqual(run_body["result"]["skill"], sk["name"])
-                        if sk["engine"] == "hybrid_monte_carlo":
+                        self.assertEqual(run_body["result"]["module"], mod["name"])
+                        if mod["engine"] == "hybrid_monte_carlo":
                             self.assertIn("monte_carlo", run_body["result"])
                             self.assertEqual(run_body["result"]["monte_carlo"]["trials"], 1000)
 
-                # Verify syncing a category skill (debt = $0 -> 100) recalculates composite health_score
+                # Verify syncing a category module (debt = $0 -> 100) recalculates composite health_score
                 debt_sync_req = urllib.request.Request(
-                    f"{base}/api/plans/{plan_id}/skills/finance-debt/run",
+                    f"{base}/api/plans/{plan_id}/modules/finance-debt/run",
                     data=json.dumps({"inputs": {"accounts": [], "extra_monthly_payment": 0}, "sync_to_plan": True}).encode("utf-8"),
                     headers=auth_headers,
                     method="POST",
@@ -378,9 +377,9 @@ class TestLocalhostServerE2E(unittest.TestCase):
                     self.assertEqual(debt_sync_body["updated_plan"]["payload"]["categories"]["debt"], 100.0)
                     self.assertNotEqual(debt_sync_body["updated_plan"]["health_score"], 92.0)
 
-                with urllib.request.urlopen(urllib.request.Request(f"{base}/api/plans/{plan_id}/skills", headers=auth_headers)) as resp:
+                with urllib.request.urlopen(urllib.request.Request(f"{base}/api/plans/{plan_id}/modules", headers=auth_headers)) as resp:
                     runs_body = json.loads(resp.read().decode("utf-8"))
-                    self.assertEqual(len(runs_body["completed_skills"]), 14)
+                    self.assertEqual(len(runs_body["completed_modules"]), 14)
 
                 with urllib.request.urlopen(urllib.request.Request(f"{base}/api/plans/{plan_id}/pdf", headers=auth_headers)) as resp:
                     self.assertEqual(resp.status, 200)

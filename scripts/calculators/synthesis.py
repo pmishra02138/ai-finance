@@ -30,7 +30,7 @@ def calc_analyze(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]
     strongest = max(pillars, key=lambda x: x[1])
 
     return {
-        "skill": "finance-analyze",
+        "module": "finance-analyze",
         "score": composite,
         "grade": grade,
         "summary": f"Composite Financial Health Score: {composite}/100 (Grade {grade}) — {signal}. Strongest: {strongest[0]}; Top focus: {weakest[0]}.",
@@ -77,7 +77,7 @@ def calc_report_pdf(_inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, 
     client = str(plan.get("client_name") or "Personal Financial Plan")
     actions = plan.get("action_items") or []
     return {
-        "skill": "finance-report-pdf",
+        "module": "finance-report-pdf",
         "score": round(score, 1),
         "grade": grade,
         "summary": f"Ready to export 9-page PDF report for '{client}' (Score {round(score)}/100, Grade {grade}).",
