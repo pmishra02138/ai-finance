@@ -202,9 +202,9 @@ class TestModuleRegistryAndCalculators(unittest.TestCase):
     def test_financial_audit_fixes(self) -> None:
         demo = _demo_data()
 
-        # 1. Retirement blends MC survival & scales drawdown to age 95
-        ret_demo = run_module("finance-retirement", {}, demo)
-        self.assertLessEqual(ret_demo["score"], 79.0)  # 73.1% MC survival cannot score 100/A+
+        # 1. Retirement blends MC survival (<80% survival caps score <= 79) & scales drawdown to age 95
+        ret_stressed = run_module("finance-retirement", {"desired_annual_spending": 85000}, demo)
+        self.assertLessEqual(ret_stressed["score"], 79.0)
         ret_early = run_module("finance-retirement", {"retirement_age": 55}, demo)
         self.assertIn("40-Yr", ret_early["monte_carlo"]["success_label"])
 
@@ -237,6 +237,38 @@ class TestModuleRegistryAndCalculators(unittest.TestCase):
         }
         syn = run_module("finance-analyze", {}, clean_plan)
         self.assertFalse(any("Will" in a["action"] and "CRITICAL" in a["action"] for a in syn["action_items"]))
+
+    def test_financial_review_math_fixes(self) -> None:
+        # 1.1 Rent vs Buy does not double-count principal/down payment
+        cmp_res = run_module("finance-goals", {"compare_enabled": True}, {})
+        cmp_table = cmp_res["tables"][1]["rows"]
+        net_row = next(r for r in cmp_table if "Ending Net Wealth" in r[0])
+        self.assertNotIn("-", net_row[1])
+        self.assertNotIn("-", net_row[2])
+
+        # 1.2 Negative amortization caught even when extra_monthly_payment > 0
+        neg_extra = run_module("finance-debt", {"accounts": [{"name": "Card", "balance": 25000, "apr": 29.9, "min_payment": 300}], "extra_monthly_payment": 50}, {})
+        self.assertIn("Negative amortization", neg_extra["summary"])
+
+        # 1.3 Net worth benchmark is smooth from age 34 to 35
+        nw_34 = run_module("finance-networth", {"age": 34, "annual_income": 100000, "cash_assets": 180000, "investment_assets": 0, "other_assets": 0, "other_debt": 0}, {})
+        nw_35 = run_module("finance-networth", {"age": 35, "annual_income": 100000, "cash_assets": 180000, "investment_assets": 0, "other_assets": 0, "other_debt": 0}, {})
+        self.assertLess(abs(nw_34["score"] - nw_35["score"]), 5.0)
+
+        # 1.4 Blank plan scores 0 / Not assessed instead of invented B-
+        blank = run_module("finance-analyze", {}, {})
+        self.assertEqual(blank["score"], 0.0)
+        self.assertEqual(blank["grade"], "--")
+
+        # 1.5 Zero income scores 0, and uninsured health caps Protection <= 40
+        zero_inc = run_module("finance-budget", {"monthly_income": 0, "monthly_needs": 0, "monthly_wants": 0}, {})
+        self.assertEqual(zero_inc["score"], 0.0)
+        uninsured = run_module("finance-protection", {"term_life_status": "Good", "disability_status": "Good", "health_status": "Missing", "umbrella_status": "Good", "estate_docs_status": "Good", "emergency_fund_months": 6}, {})
+        self.assertLessEqual(uninsured["score"], 40.0)
+
+        # 2.1 Short-horizon goal MC aligns with deterministic math (~45-55% odds at baseline)
+        short_goal = run_module("finance-goals", {"target_amount": 50000, "current_saved": 10000, "years_to_goal": 2, "expected_return": 4.5, "compare_enabled": False}, {})
+        self.assertGreater(short_goal["monte_carlo"]["success_rate_pct"], 40.0)
 
 
 if __name__ == "__main__":

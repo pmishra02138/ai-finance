@@ -5,6 +5,7 @@
 - `docs/WORKFLOW.md` — Visual Mermaid diagrams covering the 5-stage user workflow, system architecture, and Run & Sync / PDF request lifecycle.
 - `specs/` — Machine-readable single source of truth for all 5 stages and 10 financial modules (`baseline.json`, `foundation.json`, `growth.json`, `horizons.json`, `synthesis.json`), defining stage layout, UI form schemas, engine modes (`deterministic` vs. `hybrid_monte_carlo`), and domain threshold constants.
 - `scripts/scoring.py` — Shared pure-stdlib Financial Health Score grading and signal helpers (`score_grade`, `score_signal`).
+- `scripts/ai_copilot.py` — Plan Insights read-only chat helper (defaults to pure-stdlib offline Python summarizer; supports local Ollama `llama3.2:latest`, OpenRouter/OpenAI, and Gemini via `.env`).
 - `scripts/module_registry.py` — Loader reading `specs/*.json` for `/api/modules` and calculator domain constants.
 - `scripts/calculators/` — Modular calculation engine for all 10 modules:
   - `__init__.py` (`CALCULATORS`, `run_module`)

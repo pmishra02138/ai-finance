@@ -47,16 +47,18 @@ def calc_retirement(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, A
         default_return=float(consts.get("mc_accum_return", 0.06)),
         default_vol=float(consts.get("mc_accum_vol", 0.14)),
     )
-    retire_ret = max(0.035, port_ret - 0.015)
+    retire_ret = max(0.02, port_ret - 0.015)
     retire_vol = max(0.06, port_vol * 0.75)
 
-    proj_cons = _fv_monthly(balance, total_monthly, 0.05, years)
-    proj_mod = _fv_monthly(balance, total_monthly, 0.06, years)
-    proj_agg = _fv_monthly(balance, total_monthly, 0.07, years)
+    cons_ret = max(0.02, port_ret - 0.01)
+    agg_ret = port_ret + 0.01
+    proj_cons = _fv_monthly(balance, total_monthly, cons_ret, years)
+    proj_mod = _fv_monthly(balance, total_monthly, port_ret, years)
+    proj_agg = _fv_monthly(balance, total_monthly, agg_ret, years)
     gap = max(0.0, target - proj_mod)
 
-    plus_200 = _fv_monthly(balance, total_monthly + 200, 0.06, years)
-    plus_400 = _fv_monthly(balance, total_monthly + 400, 0.06, years)
+    plus_200 = _fv_monthly(balance, total_monthly + 200, port_ret, years)
+    plus_400 = _fv_monthly(balance, total_monthly + 400, port_ret, years)
     det_score = _clamp((proj_mod / target * 100.0) if target > 0 else 100.0)
 
     # FIRE milestones (Lean, Regular, Fat, Coast FI) derived from the same portfolio & spending
@@ -102,7 +104,7 @@ def calc_retirement(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, A
     mc_summary = {
         "trials": mc["trials"],
         "volatility_pct": mc["volatility_pct"],
-        "baseline_label": f"Deterministic 6% Baseline ({_money(total_monthly)}/mo incl. match)",
+        "baseline_label": f"Deterministic {_pct(port_ret * 100.0, 1)} Real Baseline ({_money(total_monthly)}/mo incl. match)",
         "baseline_value": _money(proj_mod),
         "success_label": f"{mc['drawdown_years']}-Yr Retirement Survival",
         "success_rate_pct": mc["success_rate_pct"],
@@ -118,11 +120,11 @@ def calc_retirement(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, A
     }
 
     scenarios = [
-        {"name": "Conservative (5%)", "monthly": total_monthly, "projected": round(proj_cons), "verdict": "On track" if proj_cons >= target else f"Short {_money(target - proj_cons)}"},
-        {"name": "Moderate (6%)", "monthly": total_monthly, "projected": round(proj_mod), "verdict": "On track" if proj_mod >= target else f"Short {_money(target - proj_mod)}"},
-        {"name": "Moderate +$200/mo", "monthly": total_monthly + 200, "projected": round(plus_200), "verdict": "On track" if plus_200 >= target else f"Short {_money(target - plus_200)}"},
-        {"name": "Moderate +$400/mo", "monthly": total_monthly + 400, "projected": round(plus_400), "verdict": "On track" if plus_400 >= target else f"Short {_money(target - plus_400)}"},
-        {"name": "Aggressive (7%)", "monthly": total_monthly, "projected": round(proj_agg), "verdict": "On track" if proj_agg >= target else f"Short {_money(target - proj_agg)}"},
+        {"name": f"Conservative ({_pct(cons_ret * 100.0, 1)} real)", "monthly": total_monthly, "projected": round(proj_cons), "verdict": "On track" if proj_cons >= target else f"Short {_money(target - proj_cons)}"},
+        {"name": f"Portfolio Baseline ({_pct(port_ret * 100.0, 1)} real)", "monthly": total_monthly, "projected": round(proj_mod), "verdict": "On track" if proj_mod >= target else f"Short {_money(target - proj_mod)}"},
+        {"name": "Baseline +$200/mo", "monthly": total_monthly + 200, "projected": round(plus_200), "verdict": "On track" if plus_200 >= target else f"Short {_money(target - plus_200)}"},
+        {"name": "Baseline +$400/mo", "monthly": total_monthly + 400, "projected": round(plus_400), "verdict": "On track" if plus_400 >= target else f"Short {_money(target - plus_400)}"},
+        {"name": f"Aggressive ({_pct(agg_ret * 100.0, 1)} real)", "monthly": total_monthly, "projected": round(proj_agg), "verdict": "On track" if proj_agg >= target else f"Short {_money(target - proj_agg)}"},
     ]
 
     recs = [
@@ -339,8 +341,8 @@ def calc_goals(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
         fv_a = _fv_monthly(diff_upfront_a, monthly_invest_a, cmp_rate, cmp_years)
         fv_b = _fv_monthly(diff_upfront_b, monthly_invest_b, cmp_rate, cmp_years)
 
-        net_a = fv_a + ending_asset_a - total_cost_a
-        net_b = fv_b + ending_asset_b - total_cost_b
+        net_a = fv_a + ending_asset_a
+        net_b = fv_b + ending_asset_b
         winner = name_a if net_a >= net_b else name_b
         advantage = abs(net_a - net_b)
 
@@ -374,7 +376,7 @@ def calc_goals(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
                     [f"Deterministic Invested FV ({cmp_years} yr)", _money(fv_a), _money(fv_b)],
                     ["Ending Asset Equity (e.g. Home)", _money(ending_asset_a), _money(ending_asset_b)],
                     ["Monte Carlo Win Rate", _pct(cmp_mc["a_win_rate_pct"]), _pct(cmp_mc["b_win_rate_pct"])],
-                    ["Net Position (Invested + Equity - Cost)", _money(net_a), _money(net_b)],
+                    ["Ending Net Wealth (Invested + Equity)", _money(net_a), _money(net_b)],
                 ],
             }
         )

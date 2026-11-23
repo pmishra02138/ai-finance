@@ -171,18 +171,21 @@ def calc_debt(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
     sn_months, sn_int, _ = _simulate_debt_payoff(accounts, extra, "snowball")
     int_saved = max(0.0, round(sn_int - av_int, 2))
 
-    # Detect negative amortization (minimum payment < monthly interest when extra == 0)
+    # Detect negative amortization per account (minimum payment <= monthly interest) or payoff hitting max_months
     neg_amort_alerts: List[str] = []
     for acc in accounts:
         bal = max(0.0, _f(acc.get("balance")))
         apr = max(0.0, _f(acc.get("apr")))
         min_pmt = max(0.0, _f(acc.get("min_payment")))
         monthly_int = bal * (apr / 100.0 / 12.0)
-        if bal > 0 and min_pmt > 0 and min_pmt <= monthly_int and extra <= 0:
+        if bal > 0 and min_pmt > 0 and min_pmt <= monthly_int:
             req_pmt = math.ceil(monthly_int + max(25.0, bal * 0.01))
             neg_amort_alerts.append(
-                f"{acc.get('name', 'Debt')}: min payment ({_money(min_pmt)}/mo) is below monthly interest ({_money(monthly_int)}/mo) — pay at least {_money(req_pmt)}/mo to stop balance growth."
+                f"{acc.get('name', 'Debt')}: min payment ({_money(min_pmt)}/mo) does not cover monthly interest ({_money(monthly_int)}/mo) — pay at least {_money(req_pmt)}/mo."
             )
+    never_paid_off = total_bal > 0 and av_months >= 600
+    if never_paid_off and not neg_amort_alerts:
+        neg_amort_alerts.append("Current total payment is insufficient to pay off balances within 50 years (600+ months).")
 
     # Separate high-APR (>7%), mid-APR (5-7%), and low-APR (<=5%) fixed debt in scoring
     if total_bal <= 0:
@@ -299,18 +302,18 @@ def calc_protection(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, A
     ef_status = "Good" if ef_months >= 6 else ("Partial" if ef_months >= 3 else "Missing")
     ef_ratio = _clamp(ef_months / 6.0, 0.0, 1.0)
 
-    # Weighted 0-100 Protection score
-    score = round(
-        _clamp(
-            _status_points(estate) * 25.0
-            + _status_points(disability) * 20.0
-            + _status_points(term_life) * 18.0
-            + _status_points(health) * 15.0
-            + _status_points(umbrella) * 10.0
-            + ef_ratio * 12.0
-        ),
-        1,
+    # Weighted 0-100 Protection score (uninsured health status caps score at 40)
+    raw_score = (
+        _status_points(estate) * 25.0
+        + _status_points(disability) * 20.0
+        + _status_points(term_life) * 18.0
+        + _status_points(health) * 15.0
+        + _status_points(umbrella) * 10.0
+        + ef_ratio * 12.0
     )
+    if health.strip().lower() == "missing":
+        raw_score = min(raw_score, 40.0)
+    score = round(_clamp(raw_score), 1)
 
     rec_map = {
         "Term Life Insurance": {

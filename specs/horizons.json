@@ -43,7 +43,7 @@
         {"key": "target_amount", "label": "Target Amount ($)", "type": "number", "default": 80000},
         {"key": "current_saved", "label": "Currently Saved ($)", "type": "number", "default": 20000},
         {"key": "years_to_goal", "label": "Years Until Goal", "type": "number", "step": "0.5", "default": 5},
-        {"key": "expected_return", "label": "Expected Annual Return (%)", "type": "number", "step": "0.1", "default": 4.5},
+        {"key": "expected_return", "label": "Expected Real Return (%)", "type": "number", "step": "0.1", "default": 4.5},
         {"key": "compare_enabled", "label": "Include Side-by-Side Trade-Off Comparison (A vs. B)", "type": "checkbox", "default": true},
         {"key": "scenario_a_name", "label": "Scenario A Name", "type": "text", "default": "Rent & Invest Difference"},
         {"key": "scenario_a_upfront", "label": "Scenario A Upfront Cost ($)", "type": "number", "default": 0},
@@ -56,7 +56,7 @@
         {"key": "scenario_b_monthly_invest", "label": "Scenario B Monthly Invest ($)", "type": "number", "default": 0},
         {"key": "scenario_b_ending_asset", "label": "Scenario B Ending Asset Equity (e.g. Home Equity, $)", "type": "number", "default": 220000},
         {"key": "horizon_years", "label": "Comparison Horizon (Years)", "type": "number", "default": 10},
-        {"key": "investment_return", "label": "Comparison Return (%)", "type": "number", "step": "0.1", "default": 6.5}
+        {"key": "investment_return", "label": "Comparison Real Return (%)", "type": "number", "step": "0.1", "default": 6.5}
       ],
       "constants": {
         "mc_trials": 1000,

@@ -93,6 +93,29 @@ uv run --no-sync python -m unittest discover -s tests -v
 
 ---
 
+## 💬 Plan Insights (Chat Assistant Modes)
+
+FinPlan includes a collapsible **Plan Insights** assistant (bottom-right chat icon) that strictly summarizes and explains your saved plan numbers:
+
+1. **Offline Python Summarizer (Default — Zero Setup, 100% Private):**
+   - Enabled automatically when no LLM environment variables are configured.
+   - Answers score, priority, retirement/Monte Carlo, debt, budget, portfolio, and protection questions directly from your saved plan in pure Python.
+   - *Limitation:* Uses rule-based lookups with limited conversational capacity. For deeper, open-ended Q&A over your plan, connect a local or cloud LLM below.
+2. **Local Private LLM with Ollama (`llama3.2:latest` — \$0, 100% Offline):**
+   - Install Ollama from [ollama.com](https://ollama.com) and download the `llama3.2:latest` (~2.0 GB) model ([ollama.com/library/llama3.2](https://ollama.com/library/llama3.2)):
+     ```bash
+     ollama pull llama3.2:latest
+     ```
+   - Create/update `.env` in the repo root (never committed):
+     ```env
+     OPENAI_BASE_URL=http://localhost:11434/v1/chat/completions
+     OPENAI_MODEL=llama3.2:latest
+     ```
+3. **Cloud LLM (Optional — OpenRouter Free Tier, OpenAI, or Gemini):**
+   - Set `OPENAI_API_KEY` (supports `sk-or-v1-...` OpenRouter keys with `OPENAI_MODEL=openrouter/free` or `google/gemma-4-31b-it:free`, or direct OpenAI keys) or `GEMINI_API_KEY` in `.env` or your host's environment variables. *(Note: cloud providers receive your active plan summary JSON when you send a chat message.)*
+
+---
+
 ## 🏗️ Project Structure
 
 ```text

@@ -24,13 +24,12 @@ def _percentile(sorted_vals: List[float], p: float) -> float:
 
 
 def _lognormal_return(rng: random.Random, mean: float, vol: float) -> float:
-    """Draw a log-normal annual return with expected growth ~mean and volatility ~vol."""
+    """Draw a log-normal annual return whose median compound return equals `mean`."""
     if vol <= 0:
         return mean
-    # Log-normal drift adjustment: E[exp((mu - 0.5*sigma^2) + sigma*Z)] = exp(mu)
     mu = math.log(max(0.05, 1.0 + mean))
     z = rng.gauss(0.0, 1.0)
-    r = math.exp((mu - 0.5 * vol * vol) + vol * z) - 1.0
+    r = math.exp(mu + vol * z) - 1.0
     return max(-0.65, r)
 
 
@@ -65,7 +64,7 @@ def simulate_retirement_mc(
         bal = max(0.0, current_balance)
         for _y in range(accum_yrs):
             r = _lognormal_return(rng, accum_return, accum_vol)
-            bal = max(0.0, bal * (1.0 + r) + annual_contrib)
+            bal = max(0.0, bal * (1.0 + r) + annual_contrib * (1.0 + 0.5 * r))
         retire_balances.append(bal)
 
         survived = True
@@ -166,10 +165,10 @@ def simulate_goal_mc(
         bal = max(0.0, current_saved)
         for _y in range(whole_years):
             r = _lognormal_return(rng, expected_return, volatility)
-            bal = max(0.0, bal * (1.0 + r) + annual_contrib)
+            bal = max(0.0, bal * (1.0 + r) + annual_contrib * (1.0 + 0.5 * r))
         if rem_frac > 1e-6:
             r = _lognormal_return(rng, expected_return * rem_frac, volatility * (rem_frac ** 0.5))
-            bal = max(0.0, bal * (1.0 + r) + annual_contrib * rem_frac)
+            bal = max(0.0, bal * (1.0 + r) + annual_contrib * rem_frac * (1.0 + 0.5 * r))
         if bal >= target_amount - 1.0:
             hits += 1
         endings.append(bal)
@@ -216,13 +215,13 @@ def simulate_compare_mc(
         bal_b = max(0.0, diff_upfront_b)
         for _y in range(yrs):
             r = _lognormal_return(rng, expected_return, volatility)
-            bal_a = max(0.0, bal_a * (1.0 + r) + ann_a)
-            bal_b = max(0.0, bal_b * (1.0 + r) + ann_b)
+            bal_a = max(0.0, bal_a * (1.0 + r) + ann_a * (1.0 + 0.5 * r))
+            bal_b = max(0.0, bal_b * (1.0 + r) + ann_b * (1.0 + 0.5 * r))
         fvs_a.append(bal_a)
         fvs_b.append(bal_b)
-        net_a = bal_a + ending_asset_a - total_cost_a
-        net_b = bal_b + ending_asset_b - total_cost_b
-        if net_a >= net_b:
+        wealth_a = bal_a + ending_asset_a
+        wealth_b = bal_b + ending_asset_b
+        if wealth_a >= wealth_b:
             a_wins += 1
 
     fvs_a.sort()

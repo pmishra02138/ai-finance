@@ -88,15 +88,11 @@ def build_dynamic_action_items(plan: Dict[str, Any], pillars: List[tuple[str, fl
 
 def calc_analyze(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
     cats = plan.get("categories") or {}
-    c_cf = _clamp(_f(inputs.get("cash_flow_score"), _f(cats.get("cash_flow"), 75)))
-    c_debt = _clamp(_f(inputs.get("debt_score"), _f(cats.get("debt"), 60)))
-    c_inv = _clamp(_f(inputs.get("investments_score"), _f(cats.get("investments"), 72)))
-    c_ret = _clamp(_f(inputs.get("retirement_score"), _f(cats.get("retirement"), 65)))
-    c_prot = _clamp(_f(inputs.get("protection_score"), _f(cats.get("protection"), 60)))
-
-    composite = round((c_cf + c_debt + c_inv + c_ret + c_prot) / 5.0, 1)
-    grade = score_grade(composite)
-    signal = score_signal(composite)
+    c_cf = _clamp(_f(inputs.get("cash_flow_score"), _f(cats.get("cash_flow"), 0.0)))
+    c_debt = _clamp(_f(inputs.get("debt_score"), _f(cats.get("debt"), 0.0)))
+    c_inv = _clamp(_f(inputs.get("investments_score"), _f(cats.get("investments"), 0.0)))
+    c_ret = _clamp(_f(inputs.get("retirement_score"), _f(cats.get("retirement"), 0.0)))
+    c_prot = _clamp(_f(inputs.get("protection_score"), _f(cats.get("protection"), 0.0)))
 
     pillars = [
         ("Cash Flow", c_cf),
@@ -105,26 +101,43 @@ def calc_analyze(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]
         ("Retirement", c_ret),
         ("Protection", c_prot),
     ]
-    weakest = min(pillars, key=lambda x: x[1])
-    strongest = max(pillars, key=lambda x: x[1])
-    sorted_actions = build_dynamic_action_items(plan, pillars)
+    assessed = [(name, sc) for name, sc in pillars if sc > 0.0]
+    if assessed:
+        composite = round(sum(sc for _, sc in assessed) / len(assessed), 1)
+        grade = score_grade(composite)
+        signal = score_signal(composite)
+        weakest = min(assessed, key=lambda x: x[1])
+        strongest = max(assessed, key=lambda x: x[1])
+        summary = f"Composite Financial Health Score: {composite}/100 (Grade {grade}, {len(assessed)}/5 pillars assessed) — {signal}. Strongest: {strongest[0]}; Top focus: {weakest[0]}."
+    else:
+        composite = 0.0
+        grade = "--"
+        signal = "Not Assessed — Save ★ Modules"
+        weakest = ("Cash Flow", 0.0)
+        strongest = ("None", 0.0)
+        summary = "No ★ pillars have been saved to this plan yet. Open any ★ module and click 'Save to My Plan' (✓✓) to score your plan."
+
+    sorted_actions = build_dynamic_action_items(plan, assessed or pillars)
 
     return {
         "module": "finance-analyze",
         "score": composite,
         "grade": grade,
-        "summary": f"Composite Financial Health Score: {composite}/100 (Grade {grade}) — {signal}. Strongest: {strongest[0]}; Top focus: {weakest[0]}.",
+        "summary": summary,
         "metrics": [
-            {"label": "Composite Score", "value": f"{composite}/100", "tone": "good" if composite >= 70 else ("warn" if composite >= 40 else "bad")},
+            {"label": "Composite Score", "value": f"{composite}/100" if assessed else "Not assessed", "tone": "good" if composite >= 70 else ("warn" if composite >= 40 else "bad")},
             {"label": "Grade", "value": grade, "tone": "good" if composite >= 70 else "warn"},
-            {"label": "Strongest Pillar", "value": f"{strongest[0]} ({round(strongest[1])})", "tone": "good"},
-            {"label": "Priority Gap", "value": f"{weakest[0]} ({round(weakest[1])})", "tone": "bad" if weakest[1] < 50 else "warn"},
+            {"label": "Strongest Pillar", "value": f"{strongest[0]} ({round(strongest[1])})" if assessed else "Not assessed", "tone": "good" if assessed else "neutral"},
+            {"label": "Priority Gap", "value": f"{weakest[0]} ({round(weakest[1])})" if assessed else "Save ★ Modules", "tone": "bad" if (assessed and weakest[1] < 50) else "warn"},
         ],
         "tables": [
             {
                 "title": "5-Pillar Financial Health Breakdown",
                 "columns": ["Category", "Weight", "Score", "Grade"],
-                "rows": [[name, "20%", f"{round(sc)}/100", score_grade(sc)] for name, sc in pillars],
+                "rows": [
+                    [name, "20%", f"{round(sc)}/100" if sc > 0 else "Not assessed", score_grade(sc) if sc > 0 else "--"]
+                    for name, sc in pillars
+                ],
             }
         ],
         "chart": {

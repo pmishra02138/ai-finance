@@ -29,12 +29,17 @@ def calc_budget(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
     save_pct = (surplus / income * 100.0) if income > 0 else 0.0
     ef_months = (liquid_cash / needs) if needs > 0 else (liquid_cash / total_out if total_out > 0 else 0.0)
 
-    score = _clamp(
-        (40.0 if save_pct >= 20 else max(0.0, save_pct * 2.0))
-        + (35.0 if needs_pct <= 50 else max(0.0, 35.0 - (needs_pct - 50.0) * 1.2))
-        + (25.0 if wants_pct <= 30 else max(0.0, 25.0 - (wants_pct - 30.0) * 1.2))
-    )
+    if income <= 0:
+        score = 0.0
+    else:
+        score = _clamp(
+            (40.0 if save_pct >= 20 else max(0.0, save_pct * 2.0))
+            + (35.0 if needs_pct <= 50 else max(0.0, 35.0 - (needs_pct - 50.0) * 1.2))
+            + (25.0 if wants_pct <= 30 else max(0.0, 25.0 - (wants_pct - 30.0) * 1.2))
+        )
     recs = []
+    if income <= 0:
+        recs.append("Enter positive monthly take-home income to calculate your 50/30/20 cash-flow score.")
     if needs_pct > 50:
         recs.append(f"Needs are {_pct(needs_pct)} (target <=50%). Look to trim {_money(needs - income * 0.50)}/mo in fixed bills.")
     if wants_pct > 30:
@@ -114,9 +119,13 @@ def calc_networth(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any
     if age <= 0:
         expected_mnd = 0.0
         bench_label = "MND Benchmark (Gross)"
-    elif age < 35:
-        # Early-career ramp (~0.6x salary at 26, ~1.2x at 30) since Stanley-Danko (Age*Income/10) over-penalizes <35
+    elif age < 30:
+        # Early-career ramp (~0.6x salary at 26, ~1.2x at 30)
         expected_mnd = annual_income * max(0.25, (age - 22) * 0.15)
+        bench_label = "Early-Career Benchmark"
+    elif age < 35:
+        # Smooth linear ramp from 1.2x at age 30 to 3.5x (Age*Income/10) at age 35
+        expected_mnd = annual_income * (1.2 + (age - 30) * (2.3 / 5.0))
         bench_label = "Early-Career Benchmark"
     else:
         expected_mnd = (age * annual_income) / 10.0
