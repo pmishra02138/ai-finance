@@ -35,6 +35,7 @@ def _demo_data() -> Dict[str, Any]:
         },
         "cash_flow": {
             "monthly_income": 9200,
+            "gross_annual_income": 145000,
             "expenses": [
                 ("Housing (mortgage, tax, ins.)", 2580),
                 ("Utilities & internet", 290),

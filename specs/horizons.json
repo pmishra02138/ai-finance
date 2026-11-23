@@ -7,14 +7,17 @@
       "name": "finance-retirement",
       "label": "Retirement Planner",
       "engine": "hybrid_monte_carlo",
-      "description": "Project your retirement nest egg with both a deterministic 6% baseline and a 1,000-trial Monte Carlo simulation covering market volatility and 30-year drawdown survival.",
+      "description": "Project your retirement nest egg with employer match, withdrawal taxes, Social Security timing, and a portfolio-linked 1,000-trial log-normal Monte Carlo stress test.",
       "fields": [
         {"key": "current_age", "label": "Current Age", "type": "number", "default": 38, "plan_path": "retirement.current_age"},
         {"key": "retirement_age", "label": "Target Retirement Age", "type": "number", "default": 65, "plan_path": "retirement.retirement_age"},
         {"key": "current_balance", "label": "Current Retirement Balance ($)", "type": "number", "default": 184000, "plan_path": "retirement.current_balance"},
-        {"key": "monthly_contribution", "label": "Monthly Contribution ($)", "type": "number", "default": 920, "plan_path": "retirement.monthly_contribution"},
-        {"key": "desired_annual_spending", "label": "Desired Annual Retirement Spend ($)", "type": "number", "default": 58000},
-        {"key": "social_security_annual", "label": "Expected Annual Social Security ($)", "type": "number", "default": 0}
+        {"key": "monthly_contribution", "label": "Your Monthly Contribution ($)", "type": "number", "default": 920, "plan_path": "retirement.monthly_contribution"},
+        {"key": "employer_match_monthly", "label": "Monthly Employer 401(k) Match ($)", "type": "number", "default": 300},
+        {"key": "desired_annual_spending", "label": "Desired After-Tax Annual Spend ($)", "type": "number", "default": 58000},
+        {"key": "retirement_tax_rate", "label": "Est. Effective Tax Rate on Withdrawals (%)", "type": "number", "step": "0.5", "default": 15.0},
+        {"key": "social_security_annual", "label": "Expected Annual Social Security ($)", "type": "number", "default": 0},
+        {"key": "social_security_start_age", "label": "Social Security Start Age", "type": "number", "default": 67}
       ],
       "constants": {
         "mc_trials": 1000,
@@ -30,9 +33,10 @@
       "name": "finance-fire",
       "label": "FIRE Calculator",
       "engine": "hybrid_monte_carlo",
-      "description": "Calculate Lean, Regular, Fat, and Coast FI targets alongside a 1,000-trial Monte Carlo stress test for 40-year early-retirement survival.",
+      "description": "Calculate Lean, Regular, Fat, and Coast FI targets (after withdrawal taxes) alongside a portfolio-linked 40-year log-normal Monte Carlo survival stress test.",
       "fields": [
-        {"key": "annual_expenses", "label": "Expected Annual Expenses ($)", "type": "number", "default": 60000},
+        {"key": "annual_expenses", "label": "Expected After-Tax Annual Expenses ($)", "type": "number", "default": 60000},
+        {"key": "retirement_tax_rate", "label": "Est. Effective Tax Rate on Withdrawals (%)", "type": "number", "step": "0.5", "default": 10.0},
         {"key": "current_invested", "label": "Current Invested Portfolio ($)", "type": "number", "default": 184000, "plan_path": "investments.total_value"},
         {"key": "annual_savings", "label": "Annual Savings / Contributions ($)", "type": "number", "default": 24000},
         {"key": "withdrawal_rate", "label": "Safe Withdrawal Rate (SWR, %)", "type": "number", "step": "0.1", "default": 4.0},
@@ -50,7 +54,7 @@
       "name": "finance-goals",
       "label": "Goal Planner",
       "engine": "hybrid_monte_carlo",
-      "description": "Plan major milestones with required monthly savings, recommended investment vehicles, and Monte Carlo probability of hitting your target on time.",
+      "description": "Plan major milestones with required monthly savings, recommended investment vehicles, and log-normal Monte Carlo probability of hitting your target on time.",
       "fields": [
         {"key": "goal_name", "label": "Goal Name", "type": "text", "default": "House Down Payment"},
         {"key": "target_amount", "label": "Target Amount ($)", "type": "number", "default": 80000},
@@ -67,16 +71,18 @@
       "name": "finance-compare",
       "label": "Scenario Compare",
       "engine": "hybrid_monte_carlo",
-      "description": "Compare two financial choices side-by-side over time with deterministic net position and Monte Carlo win probability under market volatility.",
+      "description": "Compare two financial choices side-by-side over time including opportunity cost, ending asset equity (e.g., home equity), and shared-path Monte Carlo win probability.",
       "fields": [
         {"key": "scenario_a_name", "label": "Scenario A Name", "type": "text", "default": "Rent & Invest Difference"},
         {"key": "scenario_a_upfront", "label": "Scenario A Upfront Cost ($)", "type": "number", "default": 0},
         {"key": "scenario_a_monthly_cost", "label": "Scenario A Monthly Cost ($)", "type": "number", "default": 2400},
         {"key": "scenario_a_monthly_invest", "label": "Scenario A Monthly Invest ($)", "type": "number", "default": 800},
+        {"key": "scenario_a_ending_asset", "label": "Scenario A Ending Asset Equity ($)", "type": "number", "default": 0},
         {"key": "scenario_b_name", "label": "Scenario B Name", "type": "text", "default": "Buy Home"},
         {"key": "scenario_b_upfront", "label": "Scenario B Upfront Cost ($)", "type": "number", "default": 60000},
         {"key": "scenario_b_monthly_cost", "label": "Scenario B Monthly Cost ($)", "type": "number", "default": 3200},
         {"key": "scenario_b_monthly_invest", "label": "Scenario B Monthly Invest ($)", "type": "number", "default": 0},
+        {"key": "scenario_b_ending_asset", "label": "Scenario B Ending Asset Equity (e.g. Home Equity, $)", "type": "number", "default": 220000},
         {"key": "horizon_years", "label": "Comparison Horizon (Years)", "type": "number", "default": 10},
         {"key": "investment_return", "label": "Expected Return (%)", "type": "number", "step": "0.1", "default": 6.5}
       ],

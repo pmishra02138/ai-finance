@@ -1,4 +1,4 @@
-"""Stage 3 calculators: Growth & Optimization (Portfolio, Investment Screener, Taxes)."""
+"""Stage 3 calculators: Growth & Optimization (Portfolio Review & Model ETFs, Tax Optimization)."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ try:
 except ImportError:  # pragma: no cover - when imported as scripts.calculators.*
     from ..module_registry import get_module_constants
 
-from .common import _clamp, _f, _money, _pct, score_grade
+from .common import _clamp, _f, _gross_annual_income, _money, _pct, score_grade
 
 
 SCREEN_STRATEGIES: Dict[str, Dict[str, Any]] = {
@@ -108,9 +108,18 @@ def calc_portfolio(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, An
         action = f"Buy {_money(trade)}" if trade > 50 else (f"Trim {_money(-trade)}" if trade < -50 else "On target")
         rows.append([a["name"], _pct(a["pct"]), _pct(a["target_pct"]), f"{'+' if diff >= 0 else ''}{diff:.1f}%", action])
 
+    # Consolidated model ETF template table (previously standalone Investment Screener)
+    template_key = str(inputs.get("model_template") or "3-fund").lower()
+    strat = SCREEN_STRATEGIES.get(template_key, SCREEN_STRATEGIES["3-fund"])
+    model_rows = []
+    for ticker, desc, weight_str, er in strat["tickers"]:
+        w = float(weight_str.replace("%", ""))
+        model_rows.append([ticker, desc, weight_str, er, _money(total_value * w / 100.0)])
+
     recs = [
         "Rebalance any asset class drifting >5 percentage points from target using new contributions first to avoid capital gains.",
-        "Target weighted expense ratio <=0.10% using broad index ETFs.",
+        f"Target weighted expense ratio <=0.10% (reference {strat['title']} avg ER: {strat['avg_er']}).",
+        "Syncing this allocation automatically calibrates expected return and volatility in Stage 4 Monte Carlo simulations.",
     ]
     if not alloc_valid:
         recs.insert(0, f"Allocation inputs sum to {total_pct:.1f}% instead of 100.0% — adjust weights so rebalancing trades balance.")
@@ -120,7 +129,8 @@ def calc_portfolio(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, An
         "score": round(score, 1),
         "grade": score_grade(score),
         "summary": (
-            f"Portfolio {_money(total_value)} — max drift {max_drift:.1f}pp, weighted ER {_pct(expense_ratio, 2)} ({_money(annual_fee)}/yr)."
+            f"Portfolio {_money(total_value)} — max drift {max_drift:.1f}pp, weighted ER {_pct(expense_ratio, 2)} ({_money(annual_fee)}/yr). "
+            f"Reference model: {strat['title']} ({strat['expected_return']})."
             + ("" if alloc_valid else f" Warning: weights sum to {total_pct:.1f}% (expected 100%).")
         ),
         "metrics": [
@@ -130,7 +140,14 @@ def calc_portfolio(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, An
             {"label": "Avg Expense Ratio", "value": _pct(expense_ratio, 2), "tone": "good" if expense_ratio <= 0.15 else "bad"},
             {"label": "Annual Fee Drag", "value": _money(annual_fee), "tone": "good" if expense_ratio <= 0.15 else "warn"},
         ],
-        "tables": [{"title": "Allocation & Rebalancing Trades", "columns": ["Asset Class", "Current", "Target", "Drift", "Trade"], "rows": rows}],
+        "tables": [
+            {"title": "Allocation & Rebalancing Trades", "columns": ["Asset Class", "Current", "Target", "Drift", "Trade"], "rows": rows},
+            {
+                "title": f"Reference Model Template: {strat['title']} ({strat['expected_return']}, avg ER {strat['avg_er']})",
+                "columns": ["Ticker", "Asset Role", "Weight", "ER", "Model Allocation"],
+                "rows": model_rows,
+            },
+        ],
         "chart": {
             "type": "donut",
             "title": "Current Asset Allocation (%)",
@@ -144,45 +161,15 @@ def calc_portfolio(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, An
     }
 
 
-def calc_screen(inputs: Dict[str, Any], _plan: Dict[str, Any]) -> Dict[str, Any]:
-    key = str(inputs.get("strategy") or "3-fund").lower()
-    strat = SCREEN_STRATEGIES.get(key, SCREEN_STRATEGIES["3-fund"])
-    amount = _f(inputs.get("investment_amount"), 25000)
-
-    rows = []
-    chart_items = []
-    for ticker, desc, weight_str, er in strat["tickers"]:
-        w = float(weight_str.replace("%", ""))
-        rows.append([ticker, desc, weight_str, er, _money(amount * w / 100.0)])
-        chart_items.append({"label": ticker, "value": w})
-
-    return {
-        "module": "finance-screen",
-        "score": None,
-        "grade": None,
-        "summary": f"{strat['title']} model — expected {strat['expected_return']}, avg ER {strat['avg_er']}.",
-        "metrics": [
-            {"label": "Strategy", "value": strat["title"], "tone": "neutral"},
-            {"label": "Amount to Allocate", "value": _money(amount), "tone": "neutral"},
-            {"label": "Expected Return", "value": strat["expected_return"], "tone": "good"},
-            {"label": "Avg Expense Ratio", "value": strat["avg_er"], "tone": "good"},
-        ],
-        "tables": [{"title": "Screened Model Portfolio", "columns": ["Ticker", "Asset Role", "Weight", "ER", "Allocation"], "rows": rows}],
-        "chart": {"type": "donut", "title": f"{strat['title']} Weights (%)", "items": chart_items},
-        "recommendations": [
-            "Verify fund availability and expense ratios at your brokerage before purchasing.",
-            "Educational screening model only — not a recommendation to buy any specific security.",
-        ],
-        "plan_patch": {},
-    }
-
-
 def calc_taxes(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
     cf = plan.get("cash_flow") or {}
     ret = plan.get("retirement") or {}
+    filing_status = str(inputs.get("filing_status") or "single").lower()
+    is_married = filing_status == "married"
     age = int(_f(inputs.get("age"), _f(ret.get("current_age"), 38)))
-    gross_income = _f(inputs.get("gross_annual_income"), _f(cf.get("monthly_income"), 9200) * 12.0)
-    marginal_rate = _f(inputs.get("marginal_tax_rate"), 24.0) / 100.0
+    gross_income = _f(inputs.get("gross_annual_income"), _gross_annual_income(plan))
+    marginal_rate_pct = _f(inputs.get("marginal_tax_rate"), 24.0)
+    marginal_rate = marginal_rate_pct / 100.0
     cur_401k = _f(inputs.get("current_401k"), 11000)
     cur_hsa = _f(inputs.get("current_hsa"), 0)
     cur_ira = _f(inputs.get("current_ira"), 0)
@@ -194,7 +181,8 @@ def calc_taxes(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
     limit_401k = float(consts.get("limit_401k", 23500.0)) + (float(consts.get("catchup_401k_50", 7500.0)) if age >= 50 else 0.0)
     base_hsa = float(consts.get("limit_hsa_family", 8550.0)) if family_hsa else float(consts.get("limit_hsa_single", 4300.0))
     limit_hsa = (base_hsa + (float(consts.get("catchup_hsa_55", 1000.0)) if age >= 55 else 0.0)) if hsa_eligible else 0.0
-    limit_ira = float(consts.get("limit_ira", 7000.0)) + (float(consts.get("catchup_ira_50", 1000.0)) if age >= 50 else 0.0)
+    single_ira_limit = float(consts.get("limit_ira", 7000.0)) + (float(consts.get("catchup_ira_50", 1000.0)) if age >= 50 else 0.0)
+    limit_ira = single_ira_limit * (2.0 if is_married else 1.0)
 
     rem_401k = max(0.0, limit_401k - cur_401k)
     rem_hsa = max(0.0, limit_hsa - cur_hsa)
@@ -210,16 +198,30 @@ def calc_taxes(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
     avail_total = limit_401k + limit_hsa + limit_ira
     score = _clamp((used_total / avail_total * 100.0) if avail_total > 0 else 80.0)
 
+    recs = [
+        f"Prioritize HSA ({_money(rem_hsa)} remaining) and 401(k) ({_money(rem_401k)} remaining) to capture {_money(save_401k + save_hsa)}/yr.",
+    ]
+    if marginal_rate_pct <= 12.0:
+        recs.append("At <=12% marginal bracket, favor Roth 401(k)/Roth IRA contributions to lock in historically low tax rates.")
+    else:
+        recs.append(f"At {marginal_rate_pct:.0f}% marginal bracket, pre-tax Traditional 401(k) + HSA generally maximize immediate tax leverage.")
+    if is_married:
+        recs.append(f"Married Filing Jointly doubles combined IRA space to {_money(limit_ira)} (including spousal IRA if one spouse has lower/no earned income).")
+    recs.append("Consult a CPA before executing Roth conversions or Backdoor Roth (watch the pro-rata rule).")
+
     return {
         "module": "finance-taxes",
         "score": round(score, 1),
         "grade": score_grade(score),
-        "summary": f"Estimated {_money(total_savings)}/yr in untapped tax savings at {_pct(marginal_rate * 100, 0)} marginal bracket.",
+        "summary": (
+            f"Estimated {_money(total_savings)}/yr in untapped tax savings ({'Married Filing Jointly' if is_married else 'Single'}, "
+            f"{_pct(marginal_rate_pct, 0)} bracket on {_money(gross_income)} gross income)."
+        ),
         "metrics": [
             {"label": "Gross Annual Income", "value": _money(gross_income), "tone": "neutral"},
             {"label": "Est. Annual Tax Savings", "value": _money(total_savings), "tone": "good"},
             {"label": "Unused 401(k) Space", "value": _money(rem_401k), "tone": "warn" if rem_401k > 0 else "good"},
-            {"label": "Unused HSA Space", "value": _money(rem_hsa), "tone": "warn" if rem_hsa > 0 else "good"},
+            {"label": "Unused IRA Space", "value": _money(rem_ira), "tone": "warn" if rem_ira > 0 else "good"},
         ],
         "tables": [
             {
@@ -228,7 +230,7 @@ def calc_taxes(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
                 "rows": [
                     ["Traditional 401(k)", _money(cur_401k), _money(limit_401k), _money(rem_401k), _money(save_401k)],
                     ["HSA (Triple Tax-Free)", _money(cur_hsa), _money(limit_hsa), _money(rem_hsa), _money(save_hsa)],
-                    ["IRA / Backdoor Roth", _money(cur_ira), _money(limit_ira), _money(rem_ira), "Tax-free growth"],
+                    ["IRA / Backdoor Roth" + (" (Joint)" if is_married else ""), _money(cur_ira), _money(limit_ira), _money(rem_ira), "Tax-free growth"],
                     ["Tax-Loss Harvesting", _money(harvestable_losses), "$3,000 ord. cap", _money(tlh_ded), _money(save_tlh)],
                 ],
             }
@@ -242,9 +244,6 @@ def calc_taxes(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
                 {"label": "Loss Harvest", "value": round(save_tlh, 2)},
             ],
         },
-        "recommendations": [
-            f"Prioritize HSA ({_money(rem_hsa)} remaining) and 401(k) ({_money(rem_401k)} remaining) to capture {_money(save_401k + save_hsa)}/yr.",
-            "Consult a CPA before executing Roth conversions or Backdoor Roth (watch pro-rata rule).",
-        ],
-        "plan_patch": {},
+        "recommendations": recs,
+        "plan_patch": {"cash_flow": {**cf, "gross_annual_income": gross_income}},
     }

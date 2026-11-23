@@ -1,15 +1,15 @@
 {
   "id": "foundation",
   "title": "2. Foundation & Defense",
-  "subtitle": "Optimize cash flow, safety net, and debt",
+  "subtitle": "Optimize cash flow, safety net, debt, and protection",
   "modules": [
     {
       "name": "finance-budget",
       "label": "Budget & Cash Flow",
       "engine": "deterministic",
-      "description": "Analyze your monthly income and spending using the 50/30/20 framework to find extra savings.",
+      "description": "Analyze your monthly take-home pay and spending using the 50/30/20 framework to uncover extra savings.",
       "fields": [
-        {"key": "monthly_income", "label": "Monthly Income ($)", "type": "number", "default": 9200, "plan_path": "cash_flow.monthly_income"},
+        {"key": "monthly_income", "label": "Monthly Take-Home Pay ($)", "type": "number", "default": 9200, "plan_path": "cash_flow.monthly_income"},
         {"key": "monthly_needs", "label": "Monthly Essential Needs ($)", "type": "number", "default": 4600},
         {"key": "monthly_wants", "label": "Monthly Discretionary Wants ($)", "type": "number", "default": 1600}
       ],
@@ -23,7 +23,7 @@
       "name": "finance-emergency",
       "label": "Emergency Fund",
       "engine": "deterministic",
-      "description": "Determine your ideal emergency fund target in months of expenses and see how fast you can build it.",
+      "description": "Determine your ideal emergency fund target in months of essential expenses and see how fast you can build it.",
       "fields": [
         {"key": "monthly_essential_expenses", "label": "Monthly Essential Expenses ($)", "type": "number", "default": 4000},
         {"key": "current_emergency_fund", "label": "Current Emergency Fund ($)", "type": "number", "default": 11000},
@@ -51,7 +51,7 @@
       "name": "finance-debt",
       "label": "Debt Payoff",
       "engine": "deterministic",
-      "description": "Compare Avalanche vs. Snowball payoff strategies to see how quickly you can become debt-free and how much interest you save.",
+      "description": "Compare Avalanche vs. Snowball payoff strategies and separate high-APR consumer debt from low-APR fixed loans.",
       "fields": [
         {"key": "extra_monthly_payment", "label": "Extra Monthly Payment Toward Debt ($)", "type": "number", "default": 400},
         {
@@ -66,8 +66,74 @@
         }
       ],
       "constants": {
-        "max_months": 600
+        "max_months": 600,
+        "high_apr_threshold": 7.0
       }
+    },
+    {
+      "name": "finance-protection",
+      "label": "Protection & Estate",
+      "engine": "deterministic",
+      "description": "Audit insurance coverage (term life, disability, health, umbrella) and estate documents (will, POA, beneficiaries) to score your Protection pillar.",
+      "fields": [
+        {
+          "key": "term_life_status",
+          "label": "Term Life Insurance",
+          "type": "select",
+          "default": "Good",
+          "options": [
+            {"value": "Good", "label": "Good (10-12x income or no dependents)"},
+            {"value": "Partial", "label": "Partial (employer-only or underinsured)"},
+            {"value": "Missing", "label": "Missing (needed for dependents)"}
+          ]
+        },
+        {
+          "key": "disability_status",
+          "label": "Disability Insurance (LTD)",
+          "type": "select",
+          "default": "Partial",
+          "options": [
+            {"value": "Good", "label": "Good (60%+ own-occupation coverage)"},
+            {"value": "Partial", "label": "Partial (basic employer policy only)"},
+            {"value": "Missing", "label": "Missing (no disability coverage)"}
+          ]
+        },
+        {
+          "key": "health_status",
+          "label": "Health Insurance",
+          "type": "select",
+          "default": "Good",
+          "options": [
+            {"value": "Good", "label": "Good (comprehensive or HDHP + HSA)"},
+            {"value": "Partial", "label": "Partial (high out-of-pocket exposure)"},
+            {"value": "Missing", "label": "Missing (uninsured)"}
+          ]
+        },
+        {
+          "key": "umbrella_status",
+          "label": "Umbrella / Liability Coverage",
+          "type": "select",
+          "default": "Partial",
+          "options": [
+            {"value": "Good", "label": "Good ($1M+ umbrella or low exposure)"},
+            {"value": "Partial", "label": "Partial (standard auto/home only)"},
+            {"value": "Missing", "label": "Missing (high assets, no umbrella)"}
+          ]
+        },
+        {
+          "key": "estate_docs_status",
+          "label": "Will, POA & Beneficiaries",
+          "type": "select",
+          "default": "Missing",
+          "options": [
+            {"value": "Good", "label": "Good (will, POA, directive & beneficiaries current)"},
+            {"value": "Partial", "label": "Partial (beneficiaries set, no will/POA)"},
+            {"value": "Missing", "label": "Missing (no estate documents)"}
+          ]
+        },
+        {"key": "emergency_fund_months", "label": "Emergency Fund Coverage (Months)", "type": "number", "step": "0.5", "default": 4}
+      ],
+      "constants": {}
     }
   ]
 }

@@ -112,8 +112,8 @@ class TestModuleRegistryAndCalculators(unittest.TestCase):
             "finance-budget",
             "finance-emergency",
             "finance-debt",
+            "finance-protection",
             "finance-portfolio",
-            "finance-screen",
             "finance-taxes",
             "finance-analyze",
             "finance-report-pdf",
@@ -150,6 +150,57 @@ class TestModuleRegistryAndCalculators(unittest.TestCase):
                 self.assertEqual(mod["engine"], "hybrid_monte_carlo")
             else:
                 self.assertEqual(mod["engine"], "deterministic")
+
+    def test_financial_logic_upgrades(self) -> None:
+        demo = _demo_data()
+
+        # 1. Protection & Estate module drives categories.protection & protection.items
+        prot_missing = run_module(
+            "finance-protection",
+            {"term_life_status": "Missing", "disability_status": "Missing", "health_status": "Good", "umbrella_status": "Missing", "estate_docs_status": "Missing", "emergency_fund_months": 6},
+            demo,
+        )
+        prot_full = run_module(
+            "finance-protection",
+            {"term_life_status": "Good", "disability_status": "Good", "health_status": "Good", "umbrella_status": "Good", "estate_docs_status": "Good", "emergency_fund_months": 6},
+            demo,
+        )
+        self.assertLess(prot_missing["score"], 40.0)
+        self.assertEqual(prot_full["score"], 100.0)
+        self.assertEqual(len(prot_full["plan_patch"]["protection"]["items"]), 6)
+
+        # 2. Quick Snapshot preserves existing 5-pillar score and separates liquid cash vs invested
+        q_res = run_module("finance-quick", {"liquid_cash": 10000, "invested_savings": 200000, "monthly_expenses": 5000}, demo)
+        self.assertNotIn("health_score", q_res["plan_patch"])
+        self.assertEqual(q_res["metrics"][2]["value"], "2.0 mos")
+
+        # 3. High-APR vs Low-APR debt scoring
+        low_apr = run_module("finance-debt", {"accounts": [{"name": "Low Loan", "balance": 20000, "apr": 4.0, "min_payment": 300}], "extra_monthly_payment": 0}, {})
+        high_apr = run_module("finance-debt", {"accounts": [{"name": "High Card", "balance": 20000, "apr": 22.0, "min_payment": 450}], "extra_monthly_payment": 0}, {})
+        self.assertGreater(low_apr["score"], high_apr["score"] + 25.0)
+
+        # 4. Portfolio Review includes consolidated Model ETF template table
+        port = run_module("finance-portfolio", {"model_template": "dividend"}, demo)
+        self.assertEqual(len(port["tables"]), 2)
+        self.assertIn("Dividend Growth", port["tables"][1]["title"])
+
+        # 5. Married Filing Jointly doubles IRA space & low bracket recommends Roth
+        tax_mfj = run_module("finance-taxes", {"filing_status": "married", "age": 40, "marginal_tax_rate": 12, "current_ira": 0}, demo)
+        rows = {r[0]: r[2] for r in tax_mfj["tables"][0]["rows"]}
+        self.assertEqual(rows["IRA / Backdoor Roth (Joint)"], "$14,000")
+        self.assertTrue(any("Roth" in r for r in tax_mfj["recommendations"]))
+
+        # 6. Retirement links MC volatility to portfolio allocation & models employer match + withdrawal tax
+        bond_plan = {**demo, "investments": {"total_value": 184000, "allocation": [{"name": "Bonds", "pct": 100}]}}
+        stock_plan = {**demo, "investments": {"total_value": 184000, "allocation": [{"name": "US Stocks", "pct": 100}]}}
+        ret_bond = run_module("finance-retirement", {"employer_match_monthly": 300, "retirement_tax_rate": 15, "social_security_annual": 20000, "social_security_start_age": 67}, bond_plan)
+        ret_stock = run_module("finance-retirement", {"employer_match_monthly": 300, "retirement_tax_rate": 15, "social_security_annual": 20000, "social_security_start_age": 67}, stock_plan)
+        self.assertLess(ret_bond["monte_carlo"]["volatility_pct"], ret_stock["monte_carlo"]["volatility_pct"])
+
+        # 7. Scenario Compare accounts for ending asset equity (e.g., Home Equity)
+        cmp_no_eq = run_module("finance-compare", {"scenario_a_ending_asset": 0, "scenario_b_ending_asset": 0}, demo)
+        cmp_with_eq = run_module("finance-compare", {"scenario_a_ending_asset": 0, "scenario_b_ending_asset": 500000}, demo)
+        self.assertNotEqual(cmp_no_eq["metrics"][2]["value"], cmp_with_eq["metrics"][2]["value"])
 
 
 if __name__ == "__main__":

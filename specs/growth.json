@@ -1,13 +1,13 @@
 {
   "id": "growth",
   "title": "3. Growth & Optimization",
-  "subtitle": "Portfolio allocation, screening, and taxes",
+  "subtitle": "Portfolio allocation, model ETFs, and taxes",
   "modules": [
     {
       "name": "finance-portfolio",
-      "label": "Portfolio Review",
+      "label": "Portfolio Review & Models",
       "engine": "deterministic",
-      "description": "Review your investment mix against age-based targets, spot allocation drift, and calculate exact rebalancing trades.",
+      "description": "Review your asset mix against age-based targets, calculate rebalancing trades, and compare against low-cost model ETF templates.",
       "fields": [
         {"key": "total_value", "label": "Total Invested Value ($)", "type": "number", "default": 184000, "plan_path": "investments.total_value"},
         {"key": "age", "label": "Current Age", "type": "number", "default": 38, "plan_path": "retirement.current_age"},
@@ -16,23 +16,10 @@
         {"key": "intl_stocks_pct", "label": "International Stocks (%)", "type": "number", "default": 14},
         {"key": "bonds_pct", "label": "Bonds (%)", "type": "number", "default": 18},
         {"key": "reits_pct", "label": "REITs (%)", "type": "number", "default": 6},
-        {"key": "cash_pct", "label": "Cash / Money Market (%)", "type": "number", "default": 4}
-      ],
-      "constants": {
-        "equity_rule_base": 110,
-        "rebalance_drift_threshold_pp": 5.0,
-        "target_er_pct": 0.10
-      }
-    },
-    {
-      "name": "finance-screen",
-      "label": "Investment Screener",
-      "engine": "deterministic",
-      "description": "Explore model ETF and index strategies (3-Fund, Dividend Growth, Bonds, REITs, or ESG) tailored to your investment amount.",
-      "fields": [
+        {"key": "cash_pct", "label": "Cash / Money Market (%)", "type": "number", "default": 4},
         {
-          "key": "strategy",
-          "label": "Investment Strategy",
+          "key": "model_template",
+          "label": "Reference Model ETF Template",
           "type": "select",
           "default": "3-fund",
           "options": [
@@ -42,19 +29,32 @@
             {"value": "reits", "label": "Real Estate (REIT) Tilt"},
             {"value": "esg", "label": "ESG Screened Core"}
           ]
-        },
-        {"key": "investment_amount", "label": "Amount to Allocate ($)", "type": "number", "default": 25000}
+        }
       ],
-      "constants": {}
+      "constants": {
+        "equity_rule_base": 110,
+        "rebalance_drift_threshold_pp": 5.0,
+        "target_er_pct": 0.10
+      }
     },
     {
       "name": "finance-taxes",
       "label": "Tax Optimization",
       "engine": "deterministic",
-      "description": "Estimate annual tax savings from 401(k), HSA, IRA, and tax-loss harvesting opportunities—including age 50+ catch-up limits.",
+      "description": "Estimate annual tax savings from 401(k), HSA, IRA (including spousal IRA for Married Filing Jointly), age 50+ catch-ups, and tax-loss harvesting.",
       "fields": [
+        {
+          "key": "filing_status",
+          "label": "Tax Filing Status",
+          "type": "select",
+          "default": "single",
+          "options": [
+            {"value": "single", "label": "Single"},
+            {"value": "married", "label": "Married Filing Jointly"}
+          ]
+        },
         {"key": "age", "label": "Current Age (50+ catch-up)", "type": "number", "default": 38, "plan_path": "retirement.current_age"},
-        {"key": "gross_annual_income", "label": "Gross Annual Income ($)", "type": "number", "default": 110400, "plan_agg": "annual_income"},
+        {"key": "gross_annual_income", "label": "Gross Annual Income (Pre-Tax, $)", "type": "number", "default": 145000, "plan_agg": "gross_annual_income"},
         {"key": "marginal_tax_rate", "label": "Marginal Federal Tax Bracket (%)", "type": "number", "default": 24},
         {"key": "current_401k", "label": "Current Annual 401(k) Contribution ($)", "type": "number", "default": 11000},
         {"key": "current_hsa", "label": "Current Annual HSA Contribution ($)", "type": "number", "default": 0},

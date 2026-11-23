@@ -20,8 +20,8 @@ from __future__ import annotations
 from typing import Any, Callable, Dict
 
 from .baseline import calc_networth, calc_quick
-from .foundation import _simulate_debt_payoff, calc_budget, calc_debt, calc_emergency
-from .growth import SCREEN_STRATEGIES, calc_portfolio, calc_screen, calc_taxes
+from .foundation import _simulate_debt_payoff, calc_budget, calc_debt, calc_emergency, calc_protection
+from .growth import SCREEN_STRATEGIES, calc_portfolio, calc_taxes
 from .horizons import calc_compare, calc_fire, calc_goals, calc_retirement
 from .synthesis import calc_analyze, calc_report_pdf
 
@@ -31,8 +31,8 @@ CALCULATORS: Dict[str, Callable[[Dict[str, Any], Dict[str, Any]], Dict[str, Any]
     "finance-budget": calc_budget,
     "finance-emergency": calc_emergency,
     "finance-debt": calc_debt,
+    "finance-protection": calc_protection,
     "finance-portfolio": calc_portfolio,
-    "finance-screen": calc_screen,
     "finance-taxes": calc_taxes,
     "finance-retirement": calc_retirement,
     "finance-fire": calc_fire,
@@ -60,8 +60,8 @@ __all__ = [
     "calc_budget",
     "calc_emergency",
     "calc_debt",
+    "calc_protection",
     "calc_portfolio",
-    "calc_screen",
     "calc_taxes",
     "calc_retirement",
     "calc_fire",

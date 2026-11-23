@@ -33,6 +33,11 @@ window.FinanceModules = (function () {
     } else if (specField.plan_agg === "sum_debt") {
       const total = sumDebt(plan);
       if (total > 0) return total;
+    } else if (specField.plan_agg === "gross_annual_income") {
+      const gross = getByPath(plan, "cash_flow.gross_annual_income");
+      if (gross !== undefined && gross !== null) return Number(gross);
+      const mo = getByPath(plan, "cash_flow.monthly_income");
+      if (mo !== undefined && mo !== null) return Math.round((Number(mo) * 12) / 0.76);
     } else if (specField.plan_agg === "annual_income") {
       const mo = getByPath(plan, "cash_flow.monthly_income");
       if (mo !== undefined && mo !== null) return Number(mo) * 12;

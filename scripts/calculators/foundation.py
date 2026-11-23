@@ -1,4 +1,4 @@
-"""Stage 2 calculators: Foundation & Defense (Budget, Emergency Fund, Debt Payoff)."""
+"""Stage 2 calculators: Foundation & Defense (Budget, Emergency Fund, Debt Payoff, Protection & Estate)."""
 
 from __future__ import annotations
 
@@ -45,7 +45,6 @@ def _simulate_debt_payoff(
     while any(d["balance"] > 0.01 for d in items) and months < max_months:
         months += 1
         freed = extra
-        # 1. Accrue monthly interest and pay minimums
         for d in items:
             if d["balance"] <= 0.01:
                 freed += d["min_payment"]
@@ -62,7 +61,6 @@ def _simulate_debt_payoff(
                 d["balance"] = 0.0
                 d["paid_off_month"] = months
 
-        # 2. Apply extra + snowball/avalanche rollover to priority target(s)
         for d in items:
             if freed <= 0.01:
                 break
@@ -120,9 +118,9 @@ def calc_budget(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
         "module": "finance-budget",
         "score": round(score, 1),
         "grade": score_grade(score),
-        "summary": f"50/30/20 Split: Needs {_pct(needs_pct)} / Wants {_pct(wants_pct)} / Savings {_pct(save_pct)} ({_money(surplus)}/mo surplus).",
+        "summary": f"50/30/20 Split (Take-Home): Needs {_pct(needs_pct)} / Wants {_pct(wants_pct)} / Savings {_pct(save_pct)} ({_money(surplus)}/mo surplus).",
         "metrics": [
-            {"label": "Monthly Income", "value": _money(income), "tone": "neutral"},
+            {"label": "Monthly Take-Home", "value": _money(income), "tone": "neutral"},
             {"label": "Needs (Target <=50%)", "value": f"{_money(needs)} ({_pct(needs_pct)})", "tone": "good" if needs_pct <= 50 else "warn"},
             {"label": "Wants (Target <=30%)", "value": f"{_money(wants)} ({_pct(wants_pct)})", "tone": "good" if wants_pct <= 30 else "warn"},
             {"label": "Savings (Target >=20%)", "value": f"{_money(surplus)} ({_pct(save_pct)})", "tone": "good" if save_pct >= 20 else "bad"},
@@ -187,6 +185,7 @@ def calc_emergency(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, An
     pct_funded = (current_ef / target_amount * 100.0) if target_amount > 0 else 100.0
     score = _clamp(pct_funded)
 
+    prot = plan.get("protection") or {}
     return {
         "module": "finance-emergency",
         "score": round(score, 1),
@@ -218,9 +217,10 @@ def calc_emergency(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, An
         "recommendations": [
             f"Target {target_months} months of essential expenses ({_money(target_amount)}).",
             "Keep funds in an FDIC-insured HYSA or Treasury Money Market — never in equities.",
+            "Run Protection & Estate next to score insurance and estate planning alongside your emergency fund.",
         ],
         "plan_patch": {
-            "categories": {**(plan.get("categories") or {}), "protection": round(max(40.0, score * 0.8 + 15.0), 1)},
+            "protection": {**prot, "emergency_fund_months": round(months_covered, 1)},
         },
     }
 
@@ -234,6 +234,8 @@ def calc_debt(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
 
     total_bal = sum(_f(a.get("balance")) for a in accounts)
     total_min = sum(_f(a.get("min_payment")) for a in accounts)
+    high_apr_bal = sum(_f(a.get("balance")) for a in accounts if _f(a.get("apr")) > 7.0)
+    low_apr_bal = max(0.0, total_bal - high_apr_bal)
     weighted_apr = (
         sum(_f(a.get("balance")) * _f(a.get("apr")) for a in accounts) / total_bal if total_bal > 0 else 0.0
     )
@@ -242,10 +244,15 @@ def calc_debt(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
     sn_months, sn_int, _ = _simulate_debt_payoff(accounts, extra, "snowball")
     int_saved = max(0.0, round(sn_int - av_int, 2))
 
+    # Separate high-APR consumer debt (>7%) from low-APR fixed debt (<=7%) in scoring
     if total_bal <= 0:
         score = 100.0
     else:
-        score = _clamp(95.0 - weighted_apr * 2.2 - min(35.0, av_months * 0.45))
+        high_share = high_apr_bal / total_bal
+        high_apr_penalty = high_share * min(45.0, weighted_apr * 2.2)
+        low_apr_penalty = (1.0 - high_share) * min(15.0, weighted_apr * 1.5)
+        duration_penalty = min(25.0, av_months * (0.45 if high_apr_bal > 0 else 0.12))
+        score = _clamp(98.0 - high_apr_penalty - low_apr_penalty - duration_penalty)
 
     return {
         "module": "finance-debt",
@@ -254,13 +261,13 @@ def calc_debt(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
         "summary": (
             "Debt-free! No active balances."
             if total_bal <= 0
-            else f"Avalanche pays off {_money(total_bal)} in {av_months} mos ({_money(av_int)} interest), saving {_money(int_saved)} vs. Snowball."
+            else f"Avalanche pays off {_money(total_bal)} ({_money(high_apr_bal)} high-APR >7%) in {av_months} mos ({_money(av_int)} interest), saving {_money(int_saved)} vs. Snowball."
         ),
         "metrics": [
             {"label": "Total Debt", "value": _money(total_bal), "tone": "good" if total_bal == 0 else "warn"},
-            {"label": "Weighted Avg APR", "value": _pct(weighted_apr), "tone": "good" if weighted_apr < 7 else ("warn" if weighted_apr < 15 else "bad")},
-            {"label": "Avalanche Payoff", "value": f"{av_months} mos", "tone": "neutral"},
-            {"label": "Avalanche Interest", "value": _money(av_int), "tone": "neutral"},
+            {"label": "High-APR Debt (>7%)", "value": _money(high_apr_bal), "tone": "good" if high_apr_bal == 0 else "bad"},
+            {"label": "Low-APR Debt (<=7%)", "value": _money(low_apr_bal), "tone": "neutral"},
+            {"label": "Avalanche Payoff", "value": f"{av_months} mos ({_money(av_int)} int.)", "tone": "neutral"},
             {"label": "Interest Saved vs Snowball", "value": _money(int_saved), "tone": "good"},
         ],
         "tables": [
@@ -294,6 +301,11 @@ def calc_debt(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
             if total_bal <= 0
             else [
                 f"Direct {_money(extra)}/mo extra to '{av_order[0]['name']}' ({_pct(av_order[0]['apr'])} APR) first.",
+                (
+                    f"Prioritize eliminating {_money(high_apr_bal)} in high-APR debt (>7%) before taxable investing."
+                    if high_apr_bal > 0
+                    else "All balances are <=7% APR — balance extra payoff against tax-advantaged retirement investing."
+                ),
                 f"Minimum payments total {_money(total_min)}/mo; automate all minimums to avoid late fees.",
             ]
         ),
@@ -304,6 +316,135 @@ def calc_debt(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
                 "payoff_months": av_months,
                 "total_interest": av_int,
                 "accounts": accounts,
+            },
+        },
+    }
+
+
+def _status_points(status: str) -> float:
+    st = (status or "").strip().lower()
+    if st == "good":
+        return 1.0
+    if st == "partial":
+        return 0.55
+    return 0.0
+
+
+def calc_protection(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
+    """Full Protection & Estate pillar audit (insurance + estate documents + emergency buffer)."""
+    prot = plan.get("protection") or {}
+    term_life = str(inputs.get("term_life_status") or "Good")
+    disability = str(inputs.get("disability_status") or "Partial")
+    health = str(inputs.get("health_status") or "Good")
+    umbrella = str(inputs.get("umbrella_status") or "Partial")
+    estate = str(inputs.get("estate_docs_status") or "Missing")
+    ef_months = _f(inputs.get("emergency_fund_months"), _f(prot.get("emergency_fund_months"), 4.0))
+
+    ef_status = "Good" if ef_months >= 6 else ("Partial" if ef_months >= 3 else "Missing")
+    ef_ratio = _clamp(ef_months / 6.0, 0.0, 1.0)
+
+    # Weighted 0-100 Protection score
+    score = round(
+        _clamp(
+            _status_points(estate) * 25.0
+            + _status_points(disability) * 20.0
+            + _status_points(term_life) * 18.0
+            + _status_points(health) * 15.0
+            + _status_points(umbrella) * 10.0
+            + ef_ratio * 12.0
+        ),
+        1,
+    )
+
+    rec_map = {
+        "Term Life Insurance": {
+            "Good": "Coverage in place — review every 3-5 years or after major life events.",
+            "Partial": "Employer group life is rarely portable; price an individual 20-year term policy.",
+            "Missing": "CRITICAL if dependents rely on your income — lock in 10-12x income term life.",
+        },
+        "Disability Insurance": {
+            "Good": "Strong income protection in place.",
+            "Partial": "Employer LTD often caps benefits or is taxable; evaluate supplemental own-occupation coverage.",
+            "Missing": "HIGH PRIORITY — your earning power is your largest asset; secure long-term disability coverage.",
+        },
+        "Health Insurance": {
+            "Good": "Maintain coverage and maximize HSA if enrolled in an HDHP.",
+            "Partial": "Verify out-of-pocket maximum is covered by your emergency fund.",
+            "Missing": "CRITICAL — obtain health coverage immediately to avoid catastrophic medical debt.",
+        },
+        "Auto / Home & Umbrella": {
+            "Good": "Liability protection aligned with asset level.",
+            "Partial": "Consider adding a $1M umbrella policy once net worth or income grows.",
+            "Missing": "Add $1M+ umbrella liability insurance to protect accumulated net worth.",
+        },
+        "Will / Estate Plan": {
+            "Good": "Documents current — review beneficiaries annually.",
+            "Partial": "Complete formal will, durable POA, and healthcare directive.",
+            "Missing": "CRITICAL — draft will, power of attorney, healthcare directive, and audit account beneficiaries.",
+        },
+    }
+
+    items = [
+        {"name": "Term Life Insurance", "status": term_life, "recommendation": rec_map["Term Life Insurance"].get(term_life, "Review coverage.")},
+        {"name": "Disability Insurance", "status": disability, "recommendation": rec_map["Disability Insurance"].get(disability, "Review coverage.")},
+        {"name": "Health Insurance", "status": health, "recommendation": rec_map["Health Insurance"].get(health, "Review coverage.")},
+        {"name": "Auto / Home & Umbrella", "status": umbrella, "recommendation": rec_map["Auto / Home & Umbrella"].get(umbrella, "Review coverage.")},
+        {"name": "Will / Estate Plan", "status": estate, "recommendation": rec_map["Will / Estate Plan"].get(estate, "Review documents.")},
+        {
+            "name": "Emergency Fund",
+            "status": ef_status,
+            "recommendation": f"{ef_months:.1f} months of essential expenses covered (target 6 months).",
+        },
+    ]
+
+    gaps = [it["name"] for it in items if it["status"].lower() in ("missing", "partial")]
+    recs = [f"{it['name']} ({it['status']}): {it['recommendation']}" for it in items if it["status"].lower() != "good"]
+    if not recs:
+        recs.append("All core insurance, estate, and liquidity protections are in strong shape — review annually.")
+
+    commentary = (
+        f"Top protection priorities: {', '.join(gaps[:3])}."
+        if gaps
+        else "Comprehensive protection across insurance, estate planning, and liquid reserves."
+    )
+
+    return {
+        "module": "finance-protection",
+        "score": score,
+        "grade": score_grade(score),
+        "summary": f"Protection & Estate Score: {score}/100 ({score_grade(score)}). " + (f"{len(gaps)} area(s) need attention: {', '.join(gaps[:3])}." if gaps else "All 6 protection areas covered."),
+        "metrics": [
+            {"label": "Protection Score", "value": f"{score}/100", "tone": "good" if score >= 75 else ("warn" if score >= 50 else "bad")},
+            {"label": "Estate Docs", "value": estate, "tone": "good" if estate == "Good" else ("warn" if estate == "Partial" else "bad")},
+            {"label": "Disability (LTD)", "value": disability, "tone": "good" if disability == "Good" else ("warn" if disability == "Partial" else "bad")},
+            {"label": "Emergency Runway", "value": f"{ef_months:.1f} mos", "tone": "good" if ef_months >= 6 else ("warn" if ef_months >= 3 else "bad")},
+        ],
+        "tables": [
+            {
+                "title": "Protection & Estate Scorecard",
+                "columns": ["Coverage Area", "Status", "Recommendation"],
+                "rows": [[it["name"], it["status"], it["recommendation"]] for it in items],
+            }
+        ],
+        "chart": {
+            "type": "bars",
+            "title": "Protection Coverage Readiness (%)",
+            "items": [
+                {"label": "Estate Docs", "value": round(_status_points(estate) * 100)},
+                {"label": "Disability", "value": round(_status_points(disability) * 100)},
+                {"label": "Term Life", "value": round(_status_points(term_life) * 100)},
+                {"label": "Health", "value": round(_status_points(health) * 100)},
+                {"label": "Umbrella", "value": round(_status_points(umbrella) * 100)},
+                {"label": "Emergency", "value": round(ef_ratio * 100)},
+            ],
+        },
+        "recommendations": recs[:4],
+        "plan_patch": {
+            "categories": {**(plan.get("categories") or {}), "protection": score},
+            "protection": {
+                "emergency_fund_months": round(ef_months, 1),
+                "items": items,
+                "commentary": commentary,
             },
         },
     }

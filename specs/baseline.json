@@ -7,11 +7,12 @@
       "name": "finance-quick",
       "label": "Quick Snapshot",
       "engine": "deterministic",
-      "description": "Get a fast 60-second financial health check from your income, expenses, savings, debt, and retirement age.",
+      "description": "Fast 60-second triage using net take-home pay, expenses, liquid cash, invested savings, and debt (preserves detailed 5-pillar scores once synced).",
       "fields": [
-        {"key": "monthly_income", "label": "Monthly Income ($)", "type": "number", "default": 9200, "plan_path": "cash_flow.monthly_income"},
+        {"key": "monthly_income", "label": "Monthly Take-Home Pay ($)", "type": "number", "default": 9200, "plan_path": "cash_flow.monthly_income"},
         {"key": "monthly_expenses", "label": "Monthly Expenses ($)", "type": "number", "default": 6685, "plan_agg": "sum_expenses"},
-        {"key": "total_savings", "label": "Total Savings & Investments ($)", "type": "number", "default": 184000, "plan_path": "investments.total_value"},
+        {"key": "liquid_cash", "label": "Liquid Cash & Emergency Savings ($)", "type": "number", "default": 15000},
+        {"key": "invested_savings", "label": "Invested & Retirement Savings ($)", "type": "number", "default": 184000, "plan_path": "investments.total_value"},
         {"key": "total_debt", "label": "Total Debt ($)", "type": "number", "default": 41200, "plan_agg": "sum_debt"},
         {"key": "age", "label": "Current Age", "type": "number", "default": 38, "plan_path": "retirement.current_age"},
         {"key": "retirement_age", "label": "Target Retirement Age", "type": "number", "default": 65, "plan_path": "retirement.retirement_age"}
@@ -27,16 +28,16 @@
       "name": "finance-networth",
       "label": "Net Worth Tracker",
       "engine": "deterministic",
-      "description": "Calculate your total assets, liabilities, and net worth, and track progress toward your next wealth milestone.",
+      "description": "Calculate total assets, liabilities, and net worth against the Millionaire Next Door benchmark using gross annual income.",
       "fields": [
-        {"key": "cash_assets", "label": "Cash & Savings ($)", "type": "number", "default": 15000},
+        {"key": "cash_assets", "label": "Cash & Liquid Savings ($)", "type": "number", "default": 15000},
         {"key": "investment_assets", "label": "Investments & Retirement ($)", "type": "number", "default": 184000, "plan_path": "investments.total_value"},
         {"key": "real_estate_assets", "label": "Real Estate Value ($)", "type": "number", "default": 0},
         {"key": "other_assets", "label": "Other Assets ($)", "type": "number", "default": 15000},
         {"key": "mortgage_debt", "label": "Mortgage Balance ($)", "type": "number", "default": 0},
         {"key": "other_debt", "label": "Other Debts ($)", "type": "number", "default": 41200, "plan_agg": "sum_debt"},
         {"key": "age", "label": "Current Age", "type": "number", "default": 38, "plan_path": "retirement.current_age"},
-        {"key": "annual_income", "label": "Gross Annual Income ($)", "type": "number", "default": 110400, "plan_agg": "annual_income"}
+        {"key": "annual_income", "label": "Gross Annual Income (Pre-Tax, $)", "type": "number", "default": 145000, "plan_agg": "gross_annual_income"}
       ],
       "constants": {
         "milestones": [100000, 250000, 500000, 1000000, 5000000, 10000000]

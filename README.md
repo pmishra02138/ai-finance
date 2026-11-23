@@ -62,10 +62,10 @@ Open **`http://localhost:8787`** in your browser and sign in with **`user`** / *
 
 | Stage | Modules | Engine | What You Can Analyze |
 | :--- | :--- | :--- | :--- |
-| **1. Baseline & Triage** | Quick Snapshot, Net Worth Tracker | Deterministic | Savings rate, DTI, reserve coverage, balance sheet, Millionaire Next Door tier, wealth milestones |
-| **2. Foundation & Defense** | Budget & Cash Flow, Emergency Fund, Debt Payoff | Deterministic | 50/30/20 split, target runway (3–12 months), Avalanche vs. Snowball payoff comparison |
-| **3. Growth & Optimization** | Portfolio Review, Investment Screener, Tax Optimization | Deterministic | Age-based allocation drift & rebalancing trades, model ETF strategies, 401(k)/HSA/IRA + age 50+ catch-up savings |
-| **4. Horizons & Trade-Offs** | Retirement Planner, FIRE Calculator, Goal Planner, Scenario Compare | **Deterministic + Monte Carlo** | Baseline projections side-by-side with 1,000-trial survival/win probabilities and 10th/50th/90th percentile outcomes |
+| **1. Baseline & Triage** | Quick Snapshot, Net Worth Tracker | Deterministic | Net take-home savings rate, liquid vs. invested split, balance sheet, Millionaire Next Door tier (gross income), wealth milestones |
+| **2. Foundation & Defense** | Budget & Cash Flow, Emergency Fund, Debt Payoff, Protection & Estate | Deterministic | 50/30/20 split, target runway (3–12 mos), High-APR vs. Low-APR Avalanche/Snowball payoff, full Insurance & Estate scorecard |
+| **3. Growth & Optimization** | Portfolio Review & Models, Tax Optimization | Deterministic | Age-based allocation drift, rebalancing trades + model ETF templates, 401(k)/HSA/IRA (Single & Married Filing Jointly) + age 50+ catch-ups |
+| **4. Horizons & Trade-Offs** | Retirement Planner, FIRE Calculator, Goal Planner, Scenario Compare | **Deterministic + Log-Normal Monte Carlo** | Employer match, withdrawal taxes, Social Security timing, ending home equity, and portfolio-linked 1,000-trial survival/win probabilities |
 | **5. Synthesis & Export** | Full Health Analysis, PDF Report Export | Deterministic | Composite Financial Health Score (0–100), letter grade (`A+`–`F`), and 9-page `FINANCE-PLAN.pdf` export |
 
 Clicking **Run & Sync to Plan** in any module updates your master plan in SQLite and automatically recalculates your overall Financial Health Score, grade, and signal.

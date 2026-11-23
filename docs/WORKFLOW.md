@@ -15,8 +15,8 @@ flowchart LR
     Login["Sign In / Register\n(user / password)"] --> SelectPlan["Select or Create\nFinancial Plan"]
 
     SelectPlan --> S1["Stage 1: Baseline\n• Quick Snapshot\n• Net Worth Tracker"]
-    S1 --> S2["Stage 2: Foundation\n• Budget 50/30/20\n• Emergency Fund\n• Debt Payoff"]
-    S2 --> S3["Stage 3: Growth\n• Portfolio Review\n• Investment Screener\n• Tax Optimization"]
+    S1 --> S2["Stage 2: Foundation\n• Budget 50/30/20\n• Emergency Fund\n• Debt Payoff\n• Protection & Estate"]
+    S2 --> S3["Stage 3: Growth\n• Portfolio Review & Models\n• Tax Optimization"]
     S3 --> S4["Stage 4: Horizons (MC)\n• Retirement Planner\n• FIRE Calculator\n• Goal Planner\n• Scenario Compare"]
     S4 --> S5["Stage 5: Synthesis\n• Full Health Analysis\n• PDF Report Export"]
 
