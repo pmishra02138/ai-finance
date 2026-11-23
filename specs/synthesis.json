@@ -7,8 +7,8 @@
       "name": "finance-analyze",
       "label": "Full Health Analysis",
       "engine": "deterministic",
-      "description": "Review your combined 5-pillar Financial Health Score, grade, and top priority focus, then preview or download your 9-page PDF report above.",
-      "form_note": "These 5 pillar scores are automatically pulled from your previous saved modules and are read-only here. To change any score, update that module and click 'Save to My Plan'.",
+      "description": "Review your combined 5-pillar Financial Health Score, grade, and top priority focus, then preview or download your PDF report above.",
+      "form_note": "Your 0–100 Health Score averages the 5 ★ modules (20% each) and is read-only here. Open any ★ module and click 'Save to My Plan' (✓✓) to update its score—'Preview Results' (✓) does not sync to your plan.",
       "fields": [
         {"key": "cash_flow_score", "label": "Cash Flow Score", "type": "number", "default": 78, "plan_path": "categories.cash_flow", "prefer_plan": true, "read_only": true},
         {"key": "debt_score", "label": "Debt Score", "type": "number", "default": 52, "plan_path": "categories.debt", "prefer_plan": true, "read_only": true},

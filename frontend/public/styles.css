@@ -237,8 +237,25 @@ input:focus, select:focus, textarea:focus {
   color: var(--blue);
   font-weight: 600;
 }
-.check-dot { font-size: 12px; font-weight: 700; color: var(--green); }
-.pending-dot { font-size: 11px; color: #cbd5e1; }
+.check-dot { font-size: 12px; font-weight: 700; color: var(--green); flex-shrink: 0; }
+.check-dot.preview { color: #d97706; }
+.pending-dot { font-size: 11px; color: #cbd5e1; flex-shrink: 0; }
+.module-btn-main { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.score-star {
+  font-size: 11px;
+  color: #d97706;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.sidebar-legend {
+  margin: 4px 0 10px;
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.pill.preview { background: #fef3c7; color: #b45309; border-color: #fde68a; }
 
 .content { display: flex; flex-direction: column; gap: 16px; }
 .score-banner {
@@ -773,7 +790,35 @@ input:focus, select:focus, textarea:focus {
   color: #ffffff;
 }
 .copilot-sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
-.copilot-header .btn.ghost { color: #cbd5e1; border-color: #334155; }
+.copilot-header-actions { display: flex; align-items: center; gap: 6px; }
+.copilot-icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid #475569;
+  background: #1e293b;
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.copilot-icon-btn:hover { background: #334155; }
+.copilot-icon-btn.close-btn {
+  background: #334155;
+  border-color: #64748b;
+  color: #ffffff;
+}
+.copilot-icon-btn.close-btn:hover { background: #475569; }
+.copilot-drawer.minimized { height: auto; }
+.copilot-drawer.minimized .copilot-chips,
+.copilot-drawer.minimized .copilot-messages,
+.copilot-drawer.minimized .copilot-form {
+  display: none;
+}
 .copilot-chips {
   display: flex;
   flex-wrap: wrap;

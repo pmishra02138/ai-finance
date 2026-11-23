@@ -72,7 +72,7 @@ window.FinanceModules = (function () {
 
   function renderForm(container, fields, formNote = "") {
     if (!fields.length) {
-      container.innerHTML = `<p class="muted">This module uses your active saved financial plan directly. Click <strong>Preview Results</strong> to check readiness or export your 9-page PDF above.</p>`;
+      container.innerHTML = `<p class="muted">This module uses your active saved financial plan directly. Click <strong>Preview Results</strong> to check readiness or export your PDF report above.</p>`;
       return;
     }
     const noteHtml = formNote ? `<div class="form-note">${esc(formNote)}</div>` : "";

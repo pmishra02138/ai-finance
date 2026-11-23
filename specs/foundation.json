@@ -34,6 +34,7 @@
     {
       "name": "finance-debt",
       "label": "Debt Payoff",
+      "pillar": "Debt",
       "engine": "deterministic",
       "description": "Compare Avalanche vs. Snowball payoff strategies and separate high-APR consumer debt from low-APR fixed loans.",
       "fields": [
@@ -57,6 +58,7 @@
     {
       "name": "finance-protection",
       "label": "Protection & Estate",
+      "pillar": "Protection",
       "engine": "deterministic",
       "description": "Audit insurance coverage (term life, disability, health, umbrella) and estate documents (will, POA, beneficiaries) to score your Protection pillar.",
       "fields": [

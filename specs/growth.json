@@ -6,6 +6,7 @@
     {
       "name": "finance-portfolio",
       "label": "Portfolio Review & Models",
+      "pillar": "Investments",
       "engine": "deterministic",
       "description": "Review your asset mix against age-based targets, calculate rebalancing trades, and compare against low-cost model ETF templates.",
       "fields": [

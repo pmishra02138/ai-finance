@@ -102,10 +102,23 @@ function renderStageNav() {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "module-btn" + (state.activeModuleName === mod.name ? " active" : "");
-      const done = Boolean(state.moduleRuns[mod.name]);
-      btn.innerHTML = `<span>${window.FinanceCharts.escapeHtml(mod.label)}</span>${
-        done ? '<span class="check-dot" title="Completed">✓</span>' : '<span class="pending-dot">○</span>'
-      }`;
+      const run = state.moduleRuns[mod.name];
+      const esc = window.FinanceCharts.escapeHtml;
+      const pillarTag = mod.pillar
+        ? `<span class="score-star" title="Counts toward Health Score (${esc(mod.pillar)})">★</span>`
+        : "";
+      let statusDot = '<span class="pending-dot" title="Not run yet">○</span>';
+      if (run) {
+        const isPreviewOnly = mod.syncs_to_plan !== false && run.outputs && run.outputs._synced === false;
+        if (isPreviewOnly) {
+          statusDot = '<span class="check-dot preview" title="Previewed only — click Save to My Plan to sync">✓</span>';
+        } else if (mod.syncs_to_plan === false) {
+          statusDot = '<span class="check-dot" title="Calculated">✓</span>';
+        } else {
+          statusDot = '<span class="check-dot" title="Saved to My Plan">✓✓</span>';
+        }
+      }
+      btn.innerHTML = `<span class="module-btn-main"><span>${esc(mod.label)}</span>${pillarTag}</span>${statusDot}`;
       btn.addEventListener("click", () => openModule(mod.name));
       group.appendChild(btn);
     }
@@ -123,15 +136,17 @@ function openOverview() {
   renderStageNav();
 }
 
-function setModuleStatusBadge(label) {
+function setModuleStatusBadge(label, isPreview = false) {
   const badge = $("moduleStatusBadge");
   if (!label) {
     badge.innerHTML = "";
+    badge.classList.remove("preview");
     badge.classList.add("hidden");
     return;
   }
   const esc = window.FinanceCharts.escapeHtml;
-  badge.innerHTML = `<span class="pill-check" aria-hidden="true">✓</span><span>${esc(label)}</span>`;
+  badge.classList.toggle("preview", isPreview);
+  badge.innerHTML = `<span class="pill-check" aria-hidden="true">${isPreview ? "!" : "✓"}</span><span>${esc(label)}</span>`;
   badge.classList.remove("hidden");
 }
 
@@ -147,12 +162,32 @@ function openModule(moduleName) {
   $("moduleHeaderCard").dataset.stage = meta.stage_id;
 
   $("moduleStageKicker").textContent = meta.stage_title;
+  const pillarBadge = $("modulePillarBadge");
+  if (meta.pillar) {
+    pillarBadge.textContent = `Counts Toward Health Score • ${meta.pillar}`;
+    pillarBadge.classList.remove("hidden");
+  } else if (meta.name === "finance-analyze") {
+    pillarBadge.textContent = "Overall Health Score";
+    pillarBadge.classList.remove("hidden");
+  } else {
+    pillarBadge.textContent = "Informational • Not in Health Score";
+    pillarBadge.classList.remove("hidden");
+  }
+
   $("moduleHeading").textContent = meta.label;
   $("moduleDesc").textContent = meta.description;
   $("runAndSyncBtn").classList.toggle("hidden", meta.syncs_to_plan === false);
 
   const saved = state.moduleRuns[moduleName];
-  setModuleStatusBadge(saved ? "Saved" : "");
+  if (!saved) {
+    setModuleStatusBadge("");
+  } else if (meta.syncs_to_plan !== false && saved.outputs && saved.outputs._synced === false) {
+    setModuleStatusBadge("Preview only (not synced to plan)", true);
+  } else if (meta.syncs_to_plan === false) {
+    setModuleStatusBadge("Calculated");
+  } else {
+    setModuleStatusBadge("Saved to My Plan");
+  }
 
   const fields = window.FinanceModules.getFields(meta, state.activePayload, saved && saved.inputs);
   window.FinanceModules.renderForm($("moduleFormContainer"), fields, meta.form_note || "");
@@ -190,7 +225,15 @@ async function executeActiveModule(syncToPlan) {
       await refreshPlanListOnly();
       renderPlanHeader();
     }
-    setModuleStatusBadge(syncToPlan ? "Analysis complete & plan updated" : "Analysis saved");
+    const activeMeta = (state.catalog.modules || []).find((m) => m.name === state.activeModuleName);
+    if (activeMeta && activeMeta.syncs_to_plan === false) {
+      setModuleStatusBadge("Calculated");
+    } else {
+      setModuleStatusBadge(
+        syncToPlan ? "Saved to My Plan" : "Preview only (not synced to plan)",
+        !syncToPlan
+      );
+    }
     window.FinanceModules.renderResult($("moduleResultContainer"), data.result);
     renderStageNav();
   } catch (err) {
@@ -383,11 +426,27 @@ async function confirmDeleteActivePlan() {
 
 function toggleCopilotDrawer() {
   const drawer = $("copilotDrawer");
-  drawer.classList.toggle("hidden");
-  if (!drawer.classList.contains("hidden")) {
+  if (drawer.classList.contains("hidden")) {
+    drawer.classList.remove("hidden", "minimized");
+    $("copilotMinimizeBtn").textContent = "−";
+    $("copilotMinimizeBtn").title = "Minimize";
     renderCopilotMessages();
     $("copilotInput").focus();
+  } else if (drawer.classList.contains("minimized")) {
+    drawer.classList.remove("minimized");
+    $("copilotMinimizeBtn").textContent = "−";
+    $("copilotMinimizeBtn").title = "Minimize";
+    $("copilotInput").focus();
+  } else {
+    drawer.classList.add("hidden");
   }
+}
+
+function toggleCopilotMinimize() {
+  const drawer = $("copilotDrawer");
+  const minimized = drawer.classList.toggle("minimized");
+  $("copilotMinimizeBtn").textContent = minimized ? "□" : "−";
+  $("copilotMinimizeBtn").title = minimized ? "Restore" : "Minimize";
 }
 
 function formatCopilotHtml(raw) {
@@ -681,7 +740,12 @@ async function bootstrap() {
   $("previewPdfBtn").addEventListener("click", () => fetchPdf(true));
   $("downloadPdfBtn").addEventListener("click", () => fetchPdf(false));
   $("copilotToggleBtn").addEventListener("click", toggleCopilotDrawer);
-  $("copilotCloseBtn").addEventListener("click", () => $("copilotDrawer").classList.add("hidden"));
+  $("copilotMinimizeBtn").addEventListener("click", toggleCopilotMinimize);
+  $("copilotCloseBtn").addEventListener("click", () => {
+    $("copilotDrawer").classList.add("hidden");
+    $("copilotDrawer").classList.remove("minimized");
+    $("copilotMinimizeBtn").textContent = "−";
+  });
   document.querySelectorAll(".copilot-chip").forEach((chip) => {
     chip.addEventListener("click", () => {
       const prompt = chip.getAttribute("data-prompt");

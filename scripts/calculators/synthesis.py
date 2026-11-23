@@ -135,7 +135,7 @@ def calc_analyze(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]
         "action_items": sorted_actions,
         "recommendations": [
             f"Prioritize {weakest[0]} (currently {round(weakest[1])}/100) for the fastest composite score lift.",
-            "Click 'Preview PDF' or 'Download PDF' above to export your 9-page FINANCE-PLAN.pdf report.",
+            "Click 'Preview PDF' or 'Download PDF' above to export your Financial Plan PDF report.",
         ],
         "plan_patch": {
             "health_score": composite,

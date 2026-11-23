@@ -6,6 +6,7 @@
     {
       "name": "finance-budget",
       "label": "Cash Flow & Budget",
+      "pillar": "Cash Flow",
       "engine": "deterministic",
       "description": "Capture monthly take-home pay, 50/30/20 spending split, savings rate, and liquid cash runway as your single cash-flow baseline.",
       "fields": [

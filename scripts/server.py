@@ -352,12 +352,13 @@ def run_plan_module(
         raise HTTPException(status_code=404, detail="Plan not found")
 
     result = run_module(module_name, body.inputs, plan["payload"])
+    result_with_sync = {**result, "_synced": bool(body.sync_to_plan)}
     saved_run = finance_db.upsert_module_run(
         user["id"],
         plan_id,
         module_name,
         body.inputs,
-        result,
+        result_with_sync,
         score=result.get("score"),
     )
 

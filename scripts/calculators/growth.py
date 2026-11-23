@@ -9,7 +9,8 @@ try:
 except ImportError:  # pragma: no cover - when imported as scripts.calculators.*
     from ..module_registry import get_module_constants
 
-from .common import _clamp, _f, _gross_annual_income, _money, _pct, score_grade
+from .common import _clamp, _f, _gross_annual_income, _money, _pct, _portfolio_return_vol, score_grade
+from .monte_carlo import simulate_goal_mc
 
 
 SCREEN_STRATEGIES: Dict[str, Dict[str, Any]] = {
@@ -116,10 +117,27 @@ def calc_portfolio(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, An
         w = float(weight_str.replace("%", ""))
         model_rows.append([ticker, desc, weight_str, er, _money(total_value * w / 100.0)])
 
+    # Informational 10-year Monte Carlo projection based on this allocation (net of expense ratio)
+    port_ret, port_vol, equity_pct = _portfolio_return_vol({"investments": {"allocation": alloc}})
+    net_real_ret = max(0.0, port_ret - (expense_ratio / 100.0))
+    mc_10y = simulate_goal_mc(
+        current_saved=total_value,
+        monthly_contribution=0.0,
+        years=10,
+        target_amount=total_value,
+        expected_return=net_real_ret,
+        volatility=port_vol,
+        trials=1000,
+        seed=42,
+    )
+
     recs = [
         "Rebalance any asset class drifting >5 percentage points from target using new contributions first to avoid capital gains.",
         f"Target weighted expense ratio <=0.10% (reference {strat['title']} avg ER: {strat['avg_er']}).",
-        "Syncing this allocation automatically calibrates expected return and volatility in Stage 4 Monte Carlo simulations.",
+        (
+            f"10-year Monte Carlo range on your {equity_pct:.0f}% equity mix ({mc_10y['volatility_pct']}% vol, net of fees): "
+            f"{_money(mc_10y['p10'])} (10th pct) to {_money(mc_10y['p90'])} (90th pct), median {_money(mc_10y['p50'])}."
+        ),
     ]
     if not alloc_valid:
         recs.insert(0, f"Allocation inputs sum to {total_pct:.1f}% instead of 100.0% — adjust weights so rebalancing trades balance.")
@@ -139,6 +157,8 @@ def calc_portfolio(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, An
             {"label": "Max Drift", "value": f"{max_drift:.1f} pp", "tone": "good" if max_drift <= 5 else "warn"},
             {"label": "Avg Expense Ratio", "value": _pct(expense_ratio, 2), "tone": "good" if expense_ratio <= 0.15 else "bad"},
             {"label": "Annual Fee Drag", "value": _money(annual_fee), "tone": "good" if expense_ratio <= 0.15 else "warn"},
+            {"label": "10-Yr MC Median (Real)", "value": _money(mc_10y["p50"]), "tone": "neutral"},
+            {"label": "10-Yr MC Range (10th–90th)", "value": f"{_money(mc_10y['p10'])} – {_money(mc_10y['p90'])}", "tone": "neutral"},
         ],
         "tables": [
             {"title": "Allocation & Rebalancing Trades", "columns": ["Asset Class", "Current", "Target", "Drift", "Trade"], "rows": rows},

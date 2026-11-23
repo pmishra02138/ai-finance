@@ -6,6 +6,7 @@
     {
       "name": "finance-retirement",
       "label": "Retirement & FI Planner",
+      "pillar": "Retirement",
       "engine": "hybrid_monte_carlo",
       "description": "Unified retirement and Financial Independence (FIRE) planner: employer match, withdrawal taxes, Social Security timing, Lean/Regular/Fat/Coast FI targets, Safe Withdrawal Rate, and 1,000-trial log-normal Monte Carlo.",
       "fields": [

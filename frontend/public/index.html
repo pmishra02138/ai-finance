@@ -83,6 +83,7 @@
             <h2>Planning Modules</h2>
             <span id="completionPill" class="pill sm">0/10</span>
           </div>
+          <p class="sidebar-legend"><span class="score-star">★</span> Counts toward Health Score</p>
           <nav id="stageNav" class="stage-nav"></nav>
         </div>
       </aside>
@@ -126,7 +127,10 @@
           <div id="moduleHeaderCard" class="card stage-themed">
             <div class="section-head">
               <div>
-                <div id="moduleStageKicker" class="kicker"></div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <div id="moduleStageKicker" class="kicker"></div>
+                  <span id="modulePillarBadge" class="pill sm hidden"></span>
+                </div>
                 <h2 id="moduleHeading" style="margin:2px 0 4px;"></h2>
                 <p id="moduleDesc" class="muted" style="margin:0;"></p>
               </div>
@@ -165,7 +169,10 @@
         <strong>Plan Insights</strong>
         <div class="copilot-sub">Grounded in your active plan</div>
       </div>
-      <button id="copilotCloseBtn" class="btn ghost sm" type="button" aria-label="Close Plan Insights">✕</button>
+      <div class="copilot-header-actions">
+        <button id="copilotMinimizeBtn" class="copilot-icon-btn" type="button" aria-label="Minimize Plan Insights" title="Minimize">−</button>
+        <button id="copilotCloseBtn" class="copilot-icon-btn close-btn" type="button" aria-label="Close Plan Insights" title="Close">✕</button>
+      </div>
     </div>
     <div class="copilot-chips">
       <button class="copilot-chip" type="button" data-prompt="Why is my Financial Health Score what it is?">Why is my score this?</button>
