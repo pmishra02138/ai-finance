@@ -480,6 +480,111 @@ input:focus, select:focus, textarea:focus {
   background: #fff;
 }
 
+.mc-panel {
+  margin: 14px 0 18px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  border: 1px solid #dbe4f0;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+.mc-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.mc-panel-head h4 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--navy);
+}
+.mc-meta-badge {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #334155;
+  background: #eaf1fb;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.mc-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.mc-card {
+  background: #ffffff;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.mc-card-kicker {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.mc-card-label {
+  font-size: 12.5px;
+  color: var(--slate);
+  margin-bottom: 4px;
+}
+.mc-card-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.mc-prob-track {
+  margin-top: 8px;
+  height: 7px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+.mc-prob-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+.mc-percentiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.mc-pct-item {
+  background: #f8fafc;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 9px 11px;
+  text-align: center;
+}
+.mc-pct-median {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+.mc-pct-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+.mc-pct-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.mc-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+@media (max-width: 720px) {
+  .mc-compare-grid, .mc-percentiles { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 900px) {
   .app-layout { grid-template-columns: 1fr; }
 }

@@ -33,107 +33,35 @@ HAS_FASTAPI = importlib.util.find_spec("fastapi") is not None
 HAS_UVICORN = importlib.util.find_spec("uvicorn") is not None
 
 
-class TestRepositoryAndSkills(unittest.TestCase):
-    """Verify AGY workspace skill layout, frontmatter, and tool conventions."""
+class TestStructuredSpecs(unittest.TestCase):
+    """Verify specs/*.json single source of truth and removal of legacy SKILL.md artifacts."""
 
-    def test_agents_skills_symlinks_resolve(self) -> None:
-        agents_skills = REPO_ROOT / ".agents" / "skills"
-        self.assertTrue(agents_skills.is_dir(), ".agents/skills/ directory missing")
-        entries = sorted(p.name for p in agents_skills.iterdir())
-        self.assertIn("finance", entries)
-        finance_sub = [e for e in entries if e.startswith("finance-")]
-        self.assertEqual(len(finance_sub), 14, f"Expected 14 sub-skills, found {len(finance_sub)}")
+    def test_structured_specs_exist_and_legacy_skills_removed(self) -> None:
+        specs_dir = REPO_ROOT / "specs"
+        self.assertTrue(specs_dir.is_dir(), "specs/ directory missing")
+        expected_stages = ["baseline", "foundation", "growth", "horizons", "synthesis"]
+        total_modules = 0
+        for stage in expected_stages:
+            spec_file = specs_dir / f"{stage}.json"
+            self.assertTrue(spec_file.is_file(), f"Missing {spec_file}")
+            data = json.loads(spec_file.read_text(encoding="utf-8"))
+            self.assertEqual(data["id"], stage)
+            self.assertIsInstance(data.get("modules"), list)
+            total_modules += len(data["modules"])
+            for mod in data["modules"]:
+                self.assertIn("name", mod)
+                self.assertIn("label", mod)
+                self.assertIn("description", mod)
+                self.assertIn("fields", mod)
+                self.assertIn(mod.get("engine"), ("deterministic", "hybrid_monte_carlo"))
+        self.assertEqual(total_modules, 14)
 
-        for entry in entries:
-            skill_md = agents_skills / entry / "SKILL.md"
-            self.assertTrue(skill_md.is_file(), f"Missing SKILL.md for {entry}")
-
-    def test_all_skills_have_frontmatter_and_disclaimer(self) -> None:
-        skill_files = [REPO_ROOT / "finance" / "SKILL.md"] + sorted(
-            (REPO_ROOT / "skills").glob("finance-*/SKILL.md")
-        )
-        self.assertEqual(len(skill_files), 15)
-        for path in skill_files:
-            text = path.read_text(encoding="utf-8")
-            self.assertTrue(text.startswith("---\n"), f"{path} missing YAML frontmatter start")
-            parts = text.split("---\n", 2)
-            self.assertGreaterEqual(len(parts), 3, f"{path} malformed YAML frontmatter")
-            fm = parts[1]
-            self.assertRegex(fm, r"(?m)^name:\s*\S+", f"{path} missing frontmatter 'name'")
-            self.assertRegex(fm, r"(?m)^description:\s*\S+", f"{path} missing frontmatter 'description'")
-            self.assertIn("not financial advice", text.lower(), f"{path} missing disclaimer")
-
-    def test_agy_skills_do_not_use_claude_only_instructions(self) -> None:
-        checked = [
-            REPO_ROOT / "finance" / "SKILL.md",
-            REPO_ROOT / "skills" / "finance-analyze" / "SKILL.md",
-            REPO_ROOT / "skills" / "finance-report-pdf" / "SKILL.md",
-            REPO_ROOT / "skills" / "finance-quick" / "SKILL.md",
-        ]
-        for path in checked:
-            text = path.read_text(encoding="utf-8")
-            self.assertNotIn("~/.claude/", text, f"{path} still references ~/.claude/")
-            self.assertNotIn("Task tool", text, f"{path} still references Claude Task tool")
-            self.assertNotIn("Bash(", text, f"{path} still uses Claude Bash(...) syntax")
-
-
-class TestInstallerAndUninstallerE2E(unittest.TestCase):
-    """Run install.sh and uninstall.sh against an isolated temporary HOME."""
-
-    def _run_script(self, script: str, args: list[str], home_dir: str) -> subprocess.CompletedProcess:
-        env = os.environ.copy()
-        env["HOME"] = home_dir
-        return subprocess.run(
-            ["bash", str(REPO_ROOT / script), *args],
-            cwd=str(REPO_ROOT),
-            env=env,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-    def test_install_help(self) -> None:
-        res = subprocess.run(
-            ["bash", str(REPO_ROOT / "install.sh"), "--help"],
-            cwd=str(REPO_ROOT),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertEqual(res.returncode, 0, res.stderr)
-        self.assertIn("--docker", res.stdout)
-        self.assertIn("--agy", res.stdout)
-
-    def test_local_agy_install_and_uninstall_roundtrip(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp_home:
-            res = self._run_script("install.sh", ["--local", "--agy"], tmp_home)
-            self.assertEqual(res.returncode, 0, res.stdout + "\n" + res.stderr)
-
-            agy_skills = Path(tmp_home) / ".gemini" / "antigravity" / "skills"
-            self.assertTrue((agy_skills / "finance" / "SKILL.md").is_file())
-            self.assertTrue((agy_skills / "finance" / "scripts" / "generate_finance_pdf.py").is_file())
-            self.assertTrue((agy_skills / "finance" / "scripts" / "server.py").is_file())
-            installed_sub = list(agy_skills.glob("finance-*/SKILL.md"))
-            self.assertEqual(len(installed_sub), 14)
-
-            unres = self._run_script("uninstall.sh", ["--yes"], tmp_home)
-            self.assertEqual(unres.returncode, 0, unres.stdout + "\n" + unres.stderr)
-            self.assertFalse((agy_skills / "finance").exists())
-            self.assertEqual(list(agy_skills.glob("finance-*")), [])
-
-    def test_local_claude_install_and_uninstall_roundtrip(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp_home:
-            res = self._run_script("install.sh", ["--local", "--claude"], tmp_home)
-            self.assertEqual(res.returncode, 0, res.stdout + "\n" + res.stderr)
-
-            claude_skills = Path(tmp_home) / ".claude" / "skills"
-            self.assertTrue((claude_skills / "finance" / "SKILL.md").is_file())
-            self.assertEqual(len(list(claude_skills.glob("finance-*/SKILL.md"))), 14)
-
-            unres = self._run_script("uninstall.sh", ["-y"], tmp_home)
-            self.assertEqual(unres.returncode, 0, unres.stdout + "\n" + unres.stderr)
-            self.assertFalse((claude_skills / "finance").exists())
-            self.assertEqual(list(claude_skills.glob("finance-*")), [])
+        # Ensure legacy SKILL.md artifacts are completely removed
+        self.assertFalse((REPO_ROOT / "skills").exists())
+        self.assertFalse((REPO_ROOT / "finance").exists())
+        self.assertFalse((REPO_ROOT / ".agents" / "skills").exists())
+        self.assertFalse((REPO_ROOT / "install.sh").exists())
+        self.assertFalse((REPO_ROOT / "uninstall.sh").exists())
 
 
 class TestPDFGeneratorCLI(unittest.TestCase):
@@ -420,6 +348,8 @@ class TestLocalhostServerE2E(unittest.TestCase):
                     self.assertEqual(json.loads(resp.read().decode("utf-8"))["grade"], "A+")
 
                 for sk in catalog["skills"]:
+                    self.assertIn("fields", sk)
+                    self.assertIn("engine", sk)
                     run_req = urllib.request.Request(
                         f"{base}/api/plans/{plan_id}/skills/{sk['name']}/run",
                         data=json.dumps({"inputs": {}, "sync_to_plan": True}).encode("utf-8"),
@@ -430,6 +360,9 @@ class TestLocalhostServerE2E(unittest.TestCase):
                         self.assertEqual(resp.status, 200)
                         run_body = json.loads(resp.read().decode("utf-8"))
                         self.assertEqual(run_body["result"]["skill"], sk["name"])
+                        if sk["engine"] == "hybrid_monte_carlo":
+                            self.assertIn("monte_carlo", run_body["result"])
+                            self.assertEqual(run_body["result"]["monte_carlo"]["trials"], 1000)
 
                 # Verify syncing a category skill (debt = $0 -> 100) recalculates composite health_score
                 debt_sync_req = urllib.request.Request(

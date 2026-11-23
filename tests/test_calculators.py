@@ -106,6 +106,46 @@ class TestSkillRegistryAndCalculators(unittest.TestCase):
         self.assertIs(CALCULATORS["finance-retirement"], horizons.calc_retirement)
         self.assertIs(CALCULATORS["finance-analyze"], synthesis.calc_analyze)
 
+    def test_monte_carlo_stage4_reproducibility_percentiles_and_speed(self) -> None:
+        import time
+
+        demo = _demo_data()
+        mc_skills = ("finance-retirement", "finance-fire", "finance-goals", "finance-compare")
+        det_skills = ("finance-quick", "finance-networth", "finance-budget", "finance-emergency", "finance-debt", "finance-portfolio", "finance-screen", "finance-taxes", "finance-analyze", "finance-report-pdf")
+
+        start = time.perf_counter()
+        for name in mc_skills:
+            res1 = run_skill(name, {}, demo)
+            res2 = run_skill(name, {}, demo)
+            self.assertIn("monte_carlo", res1, f"{name} missing monte_carlo payload")
+            mc = res1["monte_carlo"]
+            # Fixed seed reproducibility
+            self.assertEqual(mc, res2["monte_carlo"])
+            self.assertEqual(mc["trials"], 1000)
+            self.assertGreaterEqual(mc["success_rate_pct"], 0.0)
+            self.assertLessEqual(mc["success_rate_pct"], 100.0)
+            raws = [p["raw"] for p in mc["percentiles"]]
+            self.assertEqual(len(raws), 3)
+            self.assertLessEqual(raws[0], raws[1])
+            self.assertLessEqual(raws[1], raws[2])
+        elapsed = time.perf_counter() - start
+        self.assertLess(elapsed, 1.5, f"Monte Carlo suite too slow: {elapsed:.2f}s")
+
+        for name in det_skills:
+            res = run_skill(name, {}, demo)
+            self.assertNotIn("monte_carlo", res, f"Deterministic module {name} should not include monte_carlo")
+
+    def test_specs_drive_catalog_fields_and_engines(self) -> None:
+        cat = get_skills_catalog()
+        for sk in cat["skills"]:
+            self.assertIn("fields", sk)
+            self.assertIsInstance(sk["fields"], list)
+            self.assertIn(sk["engine"], ("deterministic", "hybrid_monte_carlo"))
+            if sk["stage_id"] == "horizons":
+                self.assertEqual(sk["engine"], "hybrid_monte_carlo")
+            else:
+                self.assertEqual(sk["engine"], "deterministic")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -149,7 +149,7 @@ function openSkill(skillName) {
   const saved = state.skillRuns[skillName];
   setSkillStatusBadge(saved ? "Saved" : "");
 
-  const fields = window.FinanceSkills.getFields(skillName, state.activePayload, saved && saved.inputs);
+  const fields = window.FinanceSkills.getFields(meta, state.activePayload, saved && saved.inputs);
   window.FinanceSkills.renderForm($("skillFormContainer"), fields);
   window.FinanceSkills.renderResult($("skillResultContainer"), saved && saved.outputs);
   renderStageNav();

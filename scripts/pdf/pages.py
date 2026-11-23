@@ -434,6 +434,32 @@ def build_retirement(story: List[Any], styles: Dict[str, ParagraphStyle], data: 
         ]))
         story.append(tbl)
 
+    mc = r.get("monte_carlo")
+    if isinstance(mc, dict) and mc.get("trials"):
+        story.append(Spacer(1, 0.16 * inch))
+        story.append(Paragraph("Monte Carlo Stress Test", styles["h2"]))
+        mc_rows = [
+            ["Metric", "Value"],
+            [f"{int(mc.get('drawdown_years', 30))}-Yr Retirement Survival ({int(mc.get('trials', 1000)):,} trials)", pct(float(mc.get("success_rate_pct", 0)))],
+            ["10th Percentile @ Retirement (Downside)", money(float(mc.get("retire_p10", 0)))],
+            ["50th Percentile @ Retirement (Median)", money(float(mc.get("retire_p50", 0)))],
+            ["90th Percentile @ Retirement (Upside)", money(float(mc.get("retire_p90", 0)))],
+        ]
+        mc_tbl = Table(mc_rows, colWidths=[4.2 * inch, 2.3 * inch])
+        mc_tbl.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), NAVY),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 9.5),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [PAGE_BG, SOFT]),
+            ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 8),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]))
+        story.append(mc_tbl)
+
     story.append(Spacer(1, 0.2 * inch))
     insight = r.get("commentary") or (
         f"To close the gap, increasing contributions by ~10–15% or adding $300–$500/mo can "
