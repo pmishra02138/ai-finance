@@ -198,6 +198,27 @@ class TestDatabaseLayer(unittest.TestCase):
             finance_db.revoke_token(token, db_path=db_path)
             self.assertIsNone(finance_db.get_user_by_token(token, db_path=db_path))
 
+            # Custom default credentials via environment variables
+            custom_db = str(Path(tmp_dir) / "custom_creds.db")
+            old_u = os.environ.get("FINPLAN_DEFAULT_USER")
+            old_p = os.environ.get("FINPLAN_DEFAULT_PASSWORD")
+            try:
+                os.environ["FINPLAN_DEFAULT_USER"] = "pankaj"
+                os.environ["FINPLAN_DEFAULT_PASSWORD"] = "s3cr3tPass"
+                finance_db.init_db(db_path=custom_db, seed_demo_payload={"client_name": "Pankaj Plan", "health_score": 80, "grade": "B+"})
+                self.assertIsNone(finance_db.authenticate_user("user", "password", db_path=custom_db))
+                custom_auth = finance_db.authenticate_user("pankaj", "s3cr3tPass", db_path=custom_db)
+                self.assertIsNotNone(custom_auth)
+            finally:
+                if old_u is None:
+                    os.environ.pop("FINPLAN_DEFAULT_USER", None)
+                else:
+                    os.environ["FINPLAN_DEFAULT_USER"] = old_u
+                if old_p is None:
+                    os.environ.pop("FINPLAN_DEFAULT_PASSWORD", None)
+                else:
+                    os.environ["FINPLAN_DEFAULT_PASSWORD"] = old_p
+
 
 class TestLocalhostServerE2E(unittest.TestCase):
     """Test unified single-port FastAPI + SQLite + static frontend end-to-end."""

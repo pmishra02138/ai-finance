@@ -193,6 +193,8 @@ def login(body: LoginRequest, request: Request) -> Dict[str, Any]:
 
 @api.post("/auth/register", status_code=201)
 def register(body: LoginRequest, request: Request) -> Dict[str, Any]:
+    if os.environ.get("FINPLAN_ALLOW_REGISTRATION", "1") == "0":
+        raise HTTPException(status_code=403, detail="Account registration is disabled on this instance.")
     _check_auth_rate_limit(request)
     finance_db.init_db(seed_demo_payload=_demo_data())
     try:
@@ -410,6 +412,11 @@ def generate_pdf(payload: Dict[str, Any]) -> Response:
 
 
 app.include_router(api)
+
+
+@app.get("/robots.txt")
+def robots_txt() -> Response:
+    return Response(content="User-agent: *\nDisallow: /\n", media_type="text/plain")
 
 
 @app.get("/{full_path:path}")

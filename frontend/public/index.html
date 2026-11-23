@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
   <title>FinPlan — Personal Financial Planning Hub</title>
   <link rel="stylesheet" href="/styles.css?v=2.6" />
 </head>
@@ -44,11 +45,11 @@
           </div>
           <label>
             Username
-            <input id="usernameInput" type="text" value="user" required autocomplete="username" />
+            <input id="usernameInput" type="text" placeholder="Username" required autocomplete="username" />
           </label>
           <label>
             Password
-            <input id="passwordInput" type="password" value="password" required autocomplete="current-password" />
+            <input id="passwordInput" type="password" placeholder="Password" required autocomplete="current-password" />
           </label>
           <div id="loginError" class="error-msg hidden"></div>
           <button class="btn primary full" type="submit">Sign In</button>

@@ -148,13 +148,15 @@ def init_db(db_path: Optional[str] = None, seed_demo_payload: Optional[Dict[str,
             conn.execute("ALTER TABLE sessions ADD COLUMN expires_at TEXT;")
 
         if os.environ.get("AI_FINANCE_SEED_DEFAULT_USER", "1") != "0":
-            row = conn.execute("SELECT id FROM users WHERE username = ?", ("user",)).fetchone()
+            default_user = (os.environ.get("FINPLAN_DEFAULT_USER") or "user").strip() or "user"
+            default_pass = os.environ.get("FINPLAN_DEFAULT_PASSWORD") or "password"
+            row = conn.execute("SELECT id FROM users WHERE username = ?", (default_user,)).fetchone()
             if row is None:
                 salt = secrets.token_hex(16)
-                pw_hash = _hash_password("password", salt)
+                pw_hash = _hash_password(default_pass, salt)
                 cur = conn.execute(
                     "INSERT INTO users (username, password_hash, salt, created_at) VALUES (?, ?, ?, ?)",
-                    ("user", pw_hash, salt, _utc_now()),
+                    (default_user, pw_hash, salt, _utc_now()),
                 )
                 user_id = cur.lastrowid
                 if seed_demo_payload is not None and user_id is not None:

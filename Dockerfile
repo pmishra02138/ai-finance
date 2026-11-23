@@ -27,6 +27,6 @@ ENV STATIC_DIR=/app/frontend/public \
 EXPOSE 8787
 
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s \
-    CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:8787/api/health')"
+    CMD python3 -c "import os, urllib.request; urllib.request.urlopen(f'http://localhost:{os.environ.get(\"PORT\", \"8787\")}/api/health')"
 
-CMD ["uv", "run", "--no-sync", "uvicorn", "scripts.server:app", "--host", "0.0.0.0", "--port", "8787"]
+CMD ["sh", "-c", "uv run --no-sync python -m uvicorn scripts.server:app --host 0.0.0.0 --port ${PORT:-8787}"]
