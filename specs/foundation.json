@@ -1,0 +1,73 @@
+{
+  "id": "foundation",
+  "title": "2. Foundation & Defense",
+  "subtitle": "Optimize cash flow, safety net, and debt",
+  "modules": [
+    {
+      "name": "finance-budget",
+      "label": "Budget & Cash Flow",
+      "engine": "deterministic",
+      "description": "Analyze your monthly income and spending using the 50/30/20 framework to find extra savings.",
+      "fields": [
+        {"key": "monthly_income", "label": "Monthly Income ($)", "type": "number", "default": 9200, "plan_path": "cash_flow.monthly_income"},
+        {"key": "monthly_needs", "label": "Monthly Essential Needs ($)", "type": "number", "default": 4600},
+        {"key": "monthly_wants", "label": "Monthly Discretionary Wants ($)", "type": "number", "default": 1600}
+      ],
+      "constants": {
+        "needs_target_pct": 50.0,
+        "wants_target_pct": 30.0,
+        "savings_target_pct": 20.0
+      }
+    },
+    {
+      "name": "finance-emergency",
+      "label": "Emergency Fund",
+      "engine": "deterministic",
+      "description": "Determine your ideal emergency fund target in months of expenses and see how fast you can build it.",
+      "fields": [
+        {"key": "monthly_essential_expenses", "label": "Monthly Essential Expenses ($)", "type": "number", "default": 4000},
+        {"key": "current_emergency_fund", "label": "Current Emergency Fund ($)", "type": "number", "default": 11000},
+        {"key": "monthly_contribution", "label": "Monthly Addition ($)", "type": "number", "default": 500},
+        {
+          "key": "job_stability",
+          "label": "Income Stability",
+          "type": "select",
+          "default": "stable",
+          "options": [
+            {"value": "stable", "label": "Stable W-2"},
+            {"value": "variable", "label": "Variable / Commission"},
+            {"value": "high_risk", "label": "High Volatility / Seasonal"}
+          ]
+        },
+        {"key": "dependents", "label": "Dependents", "type": "number", "default": 1},
+        {"key": "self_employed", "label": "Self-Employed / Business Owner", "type": "checkbox", "default": false}
+      ],
+      "constants": {
+        "min_months": 3,
+        "max_months": 12
+      }
+    },
+    {
+      "name": "finance-debt",
+      "label": "Debt Payoff",
+      "engine": "deterministic",
+      "description": "Compare Avalanche vs. Snowball payoff strategies to see how quickly you can become debt-free and how much interest you save.",
+      "fields": [
+        {"key": "extra_monthly_payment", "label": "Extra Monthly Payment Toward Debt ($)", "type": "number", "default": 400},
+        {
+          "key": "accounts",
+          "label": "Your Debt Accounts",
+          "type": "debt_list",
+          "plan_path": "debt.accounts",
+          "default": [
+            {"name": "Credit Card", "balance": 8400, "apr": 22.0, "min_payment": 220},
+            {"name": "Student Loan", "balance": 18600, "apr": 6.2, "min_payment": 210}
+          ]
+        }
+      ],
+      "constants": {
+        "max_months": 600
+      }
+    }
+  ]
+}

@@ -12,8 +12,7 @@ COPY pyproject.toml requirements.txt ./
 RUN uv sync --no-install-project --no-dev
 
 COPY scripts/ ./scripts/
-COPY finance/ ./finance/
-COPY skills/ ./skills/
+COPY specs/ ./specs/
 COPY frontend/public/ ./frontend/public/
 
 RUN useradd --create-home --uid 1000 aifinance && \

@@ -1,138 +1,88 @@
 #!/usr/bin/env python3
 """
-Dynamic skill registry for AI Personal Finance Advisor.
+Structured module registry for AI Personal Finance Advisor.
 
-Reads YAML frontmatter from skills/finance-*/SKILL.md and organizes all 14
-skills into the 5-stage guided planning sequence.
+Single source of truth loader reading `specs/{baseline,foundation,growth,horizons,synthesis}.json`
+for stage layout, UI form schemas, descriptions, engine mode (deterministic vs. hybrid_monte_carlo),
+and domain threshold constants.
 """
 
 from __future__ import annotations
 
-import re
+import json
+from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SKILLS_DIR = REPO_ROOT / "skills"
-
-STAGES: List[Dict[str, Any]] = [
-    {
-        "id": "baseline",
-        "title": "1. Baseline & Triage",
-        "subtitle": "Capture where you stand today",
-        "skills": [
-            {"name": "finance-quick", "label": "Quick Snapshot"},
-            {"name": "finance-networth", "label": "Net Worth Tracker"},
-        ],
-    },
-    {
-        "id": "foundation",
-        "title": "2. Foundation & Defense",
-        "subtitle": "Optimize cash flow, safety net, and debt",
-        "skills": [
-            {"name": "finance-budget", "label": "Budget & Cash Flow"},
-            {"name": "finance-emergency", "label": "Emergency Fund"},
-            {"name": "finance-debt", "label": "Debt Payoff"},
-        ],
-    },
-    {
-        "id": "growth",
-        "title": "3. Growth & Optimization",
-        "subtitle": "Portfolio allocation, screening, and taxes",
-        "skills": [
-            {"name": "finance-portfolio", "label": "Portfolio Review"},
-            {"name": "finance-screen", "label": "Investment Screener"},
-            {"name": "finance-taxes", "label": "Tax Optimization"},
-        ],
-    },
-    {
-        "id": "horizons",
-        "title": "4. Horizons & Trade-Offs",
-        "subtitle": "Retirement, FIRE, goals, and comparisons",
-        "skills": [
-            {"name": "finance-retirement", "label": "Retirement Planner"},
-            {"name": "finance-fire", "label": "FIRE Calculator"},
-            {"name": "finance-goals", "label": "Goal Planner"},
-            {"name": "finance-compare", "label": "Scenario Compare"},
-        ],
-    },
-    {
-        "id": "synthesis",
-        "title": "5. Synthesis & Export",
-        "subtitle": "Full 5-pillar score and client-ready PDF",
-        "skills": [
-            {"name": "finance-analyze", "label": "Full Health Analysis"},
-            {"name": "finance-report-pdf", "label": "PDF Report Export"},
-        ],
-    },
-]
-
-VALID_SKILL_NAMES = {s["name"] for stage in STAGES for s in stage["skills"]}
-
-USER_DESCRIPTIONS: Dict[str, str] = {
-    "finance-quick": "Get a fast 60-second financial health check from your income, expenses, savings, debt, and retirement age.",
-    "finance-networth": "Calculate your total assets, liabilities, and net worth, and track progress toward your next wealth milestone.",
-    "finance-budget": "Analyze your monthly income and spending using the 50/30/20 framework to find extra savings.",
-    "finance-emergency": "Determine your ideal emergency fund target in months of expenses and see how fast you can build it.",
-    "finance-debt": "Compare Avalanche vs. Snowball payoff strategies to see how quickly you can become debt-free and how much interest you save.",
-    "finance-portfolio": "Review your investment mix against age-based targets, spot allocation drift, and calculate exact rebalancing trades.",
-    "finance-screen": "Explore model ETF and index strategies (3-Fund, Dividend Growth, Bonds, REITs, or ESG) tailored to your investment amount.",
-    "finance-taxes": "Estimate annual tax savings from 401(k), HSA, IRA, and tax-loss harvesting opportunities—including age 50+ catch-up limits.",
-    "finance-retirement": "Project your retirement nest egg across conservative, moderate, and aggressive return scenarios and measure any savings gap.",
-    "finance-fire": "Calculate your Lean, Regular, Fat, and Coast Financial Independence numbers and estimate years to early retirement.",
-    "finance-goals": "Plan major milestones like a home down payment, college fund, or sabbatical with required monthly savings and timelines.",
-    "finance-compare": "Compare two financial choices side-by-side over time (such as renting vs. buying) including opportunity cost.",
-    "finance-analyze": "Combine all five financial pillars into a composite Financial Health Score (0–100), grade, and top priority focus.",
-    "finance-report-pdf": "Review your synced plan readiness and export a polished 9-page PDF financial report.",
-}
+SPECS_DIR = REPO_ROOT / "specs"
+STAGE_ORDER = ("baseline", "foundation", "growth", "horizons", "synthesis")
 
 
-def _parse_frontmatter(skill_md: Path) -> Dict[str, str]:
-    if not skill_md.is_file():
-        return {}
-    text = skill_md.read_text(encoding="utf-8")
-    if not text.startswith("---"):
-        return {}
-    parts = text.split("---", 2)
-    if len(parts) < 3:
-        return {}
-    fm = parts[1]
-    out: Dict[str, str] = {}
-    m_name = re.search(r"(?m)^name:\s*(.+)$", fm)
-    m_desc = re.search(r"(?m)^description:\s*(.+)$", fm)
-    if m_name:
-        out["name"] = m_name.group(1).strip().strip('"').strip("'")
-    if m_desc:
-        out["description"] = m_desc.group(1).strip().strip('"').strip("'")
-    return out
+@lru_cache(maxsize=1)
+def _load_stage_specs() -> List[Dict[str, Any]]:
+    stages: List[Dict[str, Any]] = []
+    for stage_id in STAGE_ORDER:
+        spec_path = SPECS_DIR / f"{stage_id}.json"
+        if not spec_path.is_file():
+            raise FileNotFoundError(f"Missing required stage spec: {spec_path}")
+        with spec_path.open("r", encoding="utf-8") as fh:
+            stages.append(json.load(fh))
+    return stages
+
+
+@lru_cache(maxsize=1)
+def _module_index() -> Dict[str, Dict[str, Any]]:
+    idx: Dict[str, Dict[str, Any]] = {}
+    for stage in _load_stage_specs():
+        for mod in stage.get("modules", []):
+            idx[mod["name"]] = {
+                **mod,
+                "stage_id": stage["id"],
+                "stage_title": stage["title"],
+            }
+    return idx
+
+
+def get_module_spec(module_name: str) -> Dict[str, Any]:
+    """Return the full structured spec dict (including constants & fields) for a module."""
+    return dict(_module_index().get(module_name, {}))
+
+
+def get_module_constants(module_name: str) -> Dict[str, Any]:
+    """Return the domain threshold constants defined in specs/ for a module."""
+    return dict(_module_index().get(module_name, {}).get("constants") or {})
 
 
 def get_skills_catalog() -> Dict[str, Any]:
-    """Return the 5 stages with all 14 skills enriched from skills/*/SKILL.md."""
+    """Return the 5 stages and all 14 module specs from specs/*.json."""
     stages_out: List[Dict[str, Any]] = []
     flat_skills: List[Dict[str, Any]] = []
 
-    for stage in STAGES:
-        enriched_skills: List[Dict[str, Any]] = []
-        for item in stage["skills"]:
-            skill_name = item["name"]
-            meta = _parse_frontmatter(SKILLS_DIR / skill_name / "SKILL.md")
+    for stage in _load_stage_specs():
+        enriched: List[Dict[str, Any]] = []
+        for mod in stage.get("modules", []):
             entry = {
-                "name": skill_name,
-                "label": item["label"],
+                "name": mod["name"],
+                "label": mod["label"],
                 "stage_id": stage["id"],
                 "stage_title": stage["title"],
-                "description": USER_DESCRIPTIONS.get(skill_name) or meta.get("description", ""),
+                "engine": mod.get("engine", "deterministic"),
+                "description": mod.get("description", ""),
+                "fields": mod.get("fields", []),
             }
-            enriched_skills.append(entry)
+            enriched.append(entry)
             flat_skills.append(entry)
         stages_out.append(
             {
                 "id": stage["id"],
                 "title": stage["title"],
-                "subtitle": stage["subtitle"],
-                "skills": enriched_skills,
+                "subtitle": stage.get("subtitle", ""),
+                "skills": enriched,
             }
         )
 
     return {"stages": stages_out, "skills": flat_skills, "total_skills": len(flat_skills)}
+
+
+VALID_SKILL_NAMES: Set[str] = set(_module_index().keys())

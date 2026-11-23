@@ -1,0 +1,79 @@
+{
+  "id": "growth",
+  "title": "3. Growth & Optimization",
+  "subtitle": "Portfolio allocation, screening, and taxes",
+  "modules": [
+    {
+      "name": "finance-portfolio",
+      "label": "Portfolio Review",
+      "engine": "deterministic",
+      "description": "Review your investment mix against age-based targets, spot allocation drift, and calculate exact rebalancing trades.",
+      "fields": [
+        {"key": "total_value", "label": "Total Invested Value ($)", "type": "number", "default": 184000, "plan_path": "investments.total_value"},
+        {"key": "age", "label": "Current Age", "type": "number", "default": 38, "plan_path": "retirement.current_age"},
+        {"key": "avg_expense_ratio", "label": "Weighted Expense Ratio (%)", "type": "number", "step": "0.01", "default": 0.08},
+        {"key": "us_stocks_pct", "label": "US Stocks (%)", "type": "number", "default": 58},
+        {"key": "intl_stocks_pct", "label": "International Stocks (%)", "type": "number", "default": 14},
+        {"key": "bonds_pct", "label": "Bonds (%)", "type": "number", "default": 18},
+        {"key": "reits_pct", "label": "REITs (%)", "type": "number", "default": 6},
+        {"key": "cash_pct", "label": "Cash / Money Market (%)", "type": "number", "default": 4}
+      ],
+      "constants": {
+        "equity_rule_base": 110,
+        "rebalance_drift_threshold_pp": 5.0,
+        "target_er_pct": 0.10
+      }
+    },
+    {
+      "name": "finance-screen",
+      "label": "Investment Screener",
+      "engine": "deterministic",
+      "description": "Explore model ETF and index strategies (3-Fund, Dividend Growth, Bonds, REITs, or ESG) tailored to your investment amount.",
+      "fields": [
+        {
+          "key": "strategy",
+          "label": "Investment Strategy",
+          "type": "select",
+          "default": "3-fund",
+          "options": [
+            {"value": "3-fund", "label": "Boglehead 3-Fund Index"},
+            {"value": "dividend", "label": "Dividend Growth"},
+            {"value": "bonds", "label": "Conservative Bond & Income"},
+            {"value": "reits", "label": "Real Estate (REIT) Tilt"},
+            {"value": "esg", "label": "ESG Screened Core"}
+          ]
+        },
+        {"key": "investment_amount", "label": "Amount to Allocate ($)", "type": "number", "default": 25000}
+      ],
+      "constants": {}
+    },
+    {
+      "name": "finance-taxes",
+      "label": "Tax Optimization",
+      "engine": "deterministic",
+      "description": "Estimate annual tax savings from 401(k), HSA, IRA, and tax-loss harvesting opportunities—including age 50+ catch-up limits.",
+      "fields": [
+        {"key": "age", "label": "Current Age (50+ catch-up)", "type": "number", "default": 38, "plan_path": "retirement.current_age"},
+        {"key": "gross_annual_income", "label": "Gross Annual Income ($)", "type": "number", "default": 110400, "plan_agg": "annual_income"},
+        {"key": "marginal_tax_rate", "label": "Marginal Federal Tax Bracket (%)", "type": "number", "default": 24},
+        {"key": "current_401k", "label": "Current Annual 401(k) Contribution ($)", "type": "number", "default": 11000},
+        {"key": "current_hsa", "label": "Current Annual HSA Contribution ($)", "type": "number", "default": 0},
+        {"key": "current_ira", "label": "Current Annual IRA Contribution ($)", "type": "number", "default": 0},
+        {"key": "harvestable_losses", "label": "Harvestable Capital Losses ($)", "type": "number", "default": 0},
+        {"key": "hsa_eligible", "label": "HDHP / HSA Eligible", "type": "checkbox", "default": true},
+        {"key": "family_hsa", "label": "Family HSA Coverage", "type": "checkbox", "default": false}
+      ],
+      "constants": {
+        "limit_401k": 23500.0,
+        "catchup_401k_50": 7500.0,
+        "limit_hsa_single": 4300.0,
+        "limit_hsa_family": 8550.0,
+        "catchup_hsa_55": 1000.0,
+        "limit_ira": 7000.0,
+        "catchup_ira_50": 1000.0,
+        "tlh_ordinary_cap": 3000.0,
+        "fica_rate": 0.0765
+      }
+    }
+  ]
+}

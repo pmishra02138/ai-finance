@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
+try:
+    from skill_registry import get_module_constants
+except ImportError:  # pragma: no cover - when imported as scripts.calculators.*
+    from ..skill_registry import get_module_constants
+
 from .common import _clamp, _f, _money, _pct, score_grade
 
 
@@ -185,17 +190,19 @@ def calc_taxes(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
     family_hsa = bool(inputs.get("family_hsa", False))
     harvestable_losses = _f(inputs.get("harvestable_losses"), 0)
 
-    limit_401k = 23500.0 + (7500.0 if age >= 50 else 0.0)
-    limit_hsa = ((8550.0 if family_hsa else 4300.0) + (1000.0 if age >= 55 else 0.0)) if hsa_eligible else 0.0
-    limit_ira = 7000.0 + (1000.0 if age >= 50 else 0.0)
+    consts = get_module_constants("finance-taxes")
+    limit_401k = float(consts.get("limit_401k", 23500.0)) + (float(consts.get("catchup_401k_50", 7500.0)) if age >= 50 else 0.0)
+    base_hsa = float(consts.get("limit_hsa_family", 8550.0)) if family_hsa else float(consts.get("limit_hsa_single", 4300.0))
+    limit_hsa = (base_hsa + (float(consts.get("catchup_hsa_55", 1000.0)) if age >= 55 else 0.0)) if hsa_eligible else 0.0
+    limit_ira = float(consts.get("limit_ira", 7000.0)) + (float(consts.get("catchup_ira_50", 1000.0)) if age >= 50 else 0.0)
 
     rem_401k = max(0.0, limit_401k - cur_401k)
     rem_hsa = max(0.0, limit_hsa - cur_hsa)
     rem_ira = max(0.0, limit_ira - cur_ira)
-    tlh_ded = min(3000.0, max(0.0, harvestable_losses))
+    tlh_ded = min(float(consts.get("tlh_ordinary_cap", 3000.0)), max(0.0, harvestable_losses))
 
     save_401k = rem_401k * marginal_rate
-    save_hsa = rem_hsa * (marginal_rate + 0.0765)
+    save_hsa = rem_hsa * (marginal_rate + float(consts.get("fica_rate", 0.0765)))
     save_tlh = tlh_ded * marginal_rate
     total_savings = save_401k + save_hsa + save_tlh
 

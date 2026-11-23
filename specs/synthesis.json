@@ -1,0 +1,29 @@
+{
+  "id": "synthesis",
+  "title": "5. Synthesis & Export",
+  "subtitle": "Full 5-pillar score and client-ready PDF",
+  "modules": [
+    {
+      "name": "finance-analyze",
+      "label": "Full Health Analysis",
+      "engine": "deterministic",
+      "description": "Combine all five financial pillars into a composite Financial Health Score (0–100), grade, and top priority focus.",
+      "fields": [
+        {"key": "cash_flow_score", "label": "Cash Flow Score (0-100)", "type": "number", "default": 78, "plan_path": "categories.cash_flow"},
+        {"key": "debt_score", "label": "Debt Score (0-100)", "type": "number", "default": 52, "plan_path": "categories.debt"},
+        {"key": "investments_score", "label": "Investments Score (0-100)", "type": "number", "default": 71, "plan_path": "categories.investments"},
+        {"key": "retirement_score", "label": "Retirement Score (0-100)", "type": "number", "default": 64, "plan_path": "categories.retirement"},
+        {"key": "protection_score", "label": "Protection Score (0-100)", "type": "number", "default": 58, "plan_path": "categories.protection"}
+      ],
+      "constants": {}
+    },
+    {
+      "name": "finance-report-pdf",
+      "label": "PDF Report Export",
+      "engine": "deterministic",
+      "description": "Review your synced plan readiness and export a polished 9-page PDF financial report.",
+      "fields": [],
+      "constants": {}
+    }
+  ]
+}

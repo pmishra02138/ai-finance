@@ -1,0 +1,90 @@
+{
+  "id": "horizons",
+  "title": "4. Horizons & Trade-Offs",
+  "subtitle": "Retirement, FIRE, goals, and comparisons",
+  "modules": [
+    {
+      "name": "finance-retirement",
+      "label": "Retirement Planner",
+      "engine": "hybrid_monte_carlo",
+      "description": "Project your retirement nest egg with both a deterministic 6% baseline and a 1,000-trial Monte Carlo simulation covering market volatility and 30-year drawdown survival.",
+      "fields": [
+        {"key": "current_age", "label": "Current Age", "type": "number", "default": 38, "plan_path": "retirement.current_age"},
+        {"key": "retirement_age", "label": "Target Retirement Age", "type": "number", "default": 65, "plan_path": "retirement.retirement_age"},
+        {"key": "current_balance", "label": "Current Retirement Balance ($)", "type": "number", "default": 184000, "plan_path": "retirement.current_balance"},
+        {"key": "monthly_contribution", "label": "Monthly Contribution ($)", "type": "number", "default": 920, "plan_path": "retirement.monthly_contribution"},
+        {"key": "desired_annual_spending", "label": "Desired Annual Retirement Spend ($)", "type": "number", "default": 58000},
+        {"key": "social_security_annual", "label": "Expected Annual Social Security ($)", "type": "number", "default": 0}
+      ],
+      "constants": {
+        "mc_trials": 1000,
+        "mc_seed": 42,
+        "mc_accum_return": 0.06,
+        "mc_accum_vol": 0.14,
+        "mc_retire_return": 0.045,
+        "mc_retire_vol": 0.10,
+        "drawdown_years": 30
+      }
+    },
+    {
+      "name": "finance-fire",
+      "label": "FIRE Calculator",
+      "engine": "hybrid_monte_carlo",
+      "description": "Calculate Lean, Regular, Fat, and Coast FI targets alongside a 1,000-trial Monte Carlo stress test for 40-year early-retirement survival.",
+      "fields": [
+        {"key": "annual_expenses", "label": "Expected Annual Expenses ($)", "type": "number", "default": 60000},
+        {"key": "current_invested", "label": "Current Invested Portfolio ($)", "type": "number", "default": 184000, "plan_path": "investments.total_value"},
+        {"key": "annual_savings", "label": "Annual Savings / Contributions ($)", "type": "number", "default": 24000},
+        {"key": "withdrawal_rate", "label": "Safe Withdrawal Rate (%)", "type": "number", "step": "0.1", "default": 4.0},
+        {"key": "expected_real_return", "label": "Expected Real Return (%)", "type": "number", "step": "0.1", "default": 6.0},
+        {"key": "current_age", "label": "Current Age", "type": "number", "default": 38, "plan_path": "retirement.current_age"}
+      ],
+      "constants": {
+        "mc_trials": 1000,
+        "mc_seed": 42,
+        "mc_volatility": 0.14,
+        "fire_horizon_years": 40
+      }
+    },
+    {
+      "name": "finance-goals",
+      "label": "Goal Planner",
+      "engine": "hybrid_monte_carlo",
+      "description": "Plan major milestones with required monthly savings, recommended investment vehicles, and Monte Carlo probability of hitting your target on time.",
+      "fields": [
+        {"key": "goal_name", "label": "Goal Name", "type": "text", "default": "House Down Payment"},
+        {"key": "target_amount", "label": "Target Amount ($)", "type": "number", "default": 80000},
+        {"key": "current_saved", "label": "Currently Saved ($)", "type": "number", "default": 20000},
+        {"key": "years_to_goal", "label": "Years Until Goal", "type": "number", "step": "0.5", "default": 5},
+        {"key": "expected_return", "label": "Expected Annual Return (%)", "type": "number", "step": "0.1", "default": 4.5}
+      ],
+      "constants": {
+        "mc_trials": 1000,
+        "mc_seed": 42
+      }
+    },
+    {
+      "name": "finance-compare",
+      "label": "Scenario Compare",
+      "engine": "hybrid_monte_carlo",
+      "description": "Compare two financial choices side-by-side over time with deterministic net position and Monte Carlo win probability under market volatility.",
+      "fields": [
+        {"key": "scenario_a_name", "label": "Scenario A Name", "type": "text", "default": "Rent & Invest Difference"},
+        {"key": "scenario_a_upfront", "label": "Scenario A Upfront Cost ($)", "type": "number", "default": 0},
+        {"key": "scenario_a_monthly_cost", "label": "Scenario A Monthly Cost ($)", "type": "number", "default": 2400},
+        {"key": "scenario_a_monthly_invest", "label": "Scenario A Monthly Invest ($)", "type": "number", "default": 800},
+        {"key": "scenario_b_name", "label": "Scenario B Name", "type": "text", "default": "Buy Home"},
+        {"key": "scenario_b_upfront", "label": "Scenario B Upfront Cost ($)", "type": "number", "default": 60000},
+        {"key": "scenario_b_monthly_cost", "label": "Scenario B Monthly Cost ($)", "type": "number", "default": 3200},
+        {"key": "scenario_b_monthly_invest", "label": "Scenario B Monthly Invest ($)", "type": "number", "default": 0},
+        {"key": "horizon_years", "label": "Comparison Horizon (Years)", "type": "number", "default": 10},
+        {"key": "investment_return", "label": "Expected Return (%)", "type": "number", "step": "0.1", "default": 6.5}
+      ],
+      "constants": {
+        "mc_trials": 1000,
+        "mc_seed": 42,
+        "mc_volatility": 0.14
+      }
+    }
+  ]
+}
