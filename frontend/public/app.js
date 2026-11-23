@@ -7,6 +7,7 @@ const state = {
   catalog: { stages: [], modules: [] },
   moduleRuns: {},
   activeModuleName: null, // null = Overview view
+  copilotHistory: [],
 };
 
 const $ = (id) => document.getElementById(id);
@@ -229,6 +230,8 @@ async function selectPlan(planId) {
   const plan = await planRes.json();
   state.activePlanId = plan.id;
   state.activePayload = plan.payload;
+  state.copilotHistory = [];
+  renderCopilotMessages();
   state.moduleRuns = {};
   if (runsRes.ok) {
     const runsData = await runsRes.json();
@@ -378,6 +381,169 @@ async function confirmDeleteActivePlan() {
   showStatus("Financial plan deleted.");
 }
 
+function toggleCopilotDrawer() {
+  const drawer = $("copilotDrawer");
+  drawer.classList.toggle("hidden");
+  if (!drawer.classList.contains("hidden")) {
+    renderCopilotMessages();
+    $("copilotInput").focus();
+  }
+}
+
+function formatCopilotHtml(raw) {
+  const esc = window.FinanceCharts.escapeHtml;
+  const formatInline = (s) =>
+    esc(s)
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, "$1<em>$2</em>")
+      .replace(/`([^`]+)`/g, "<code>$1</code>");
+
+  const splitTableRow = (line) =>
+    line
+      .replace(/^\|/, "")
+      .replace(/\|$/, "")
+      .split("|")
+      .map((cell) => cell.trim());
+
+  const isTableSep = (line) => /^\|?(\s*:?-{2,}:?\s*\|)+\s*:?-{2,}:?\s*\|?$/.test(line);
+
+  const lines = String(raw || "").replace(/\r\n/g, "\n").split("\n");
+  const html = [];
+  let listType = null; // "ul" | "ol"
+  let tableRows = [];
+
+  const closeList = () => {
+    if (listType) {
+      html.push(`</${listType}>`);
+      listType = null;
+    }
+  };
+
+  const flushTable = () => {
+    if (tableRows.length === 0) return;
+    const [head, ...body] = tableRows;
+    html.push('<div class="copilot-table-wrap"><table class="copilot-table"><thead><tr>');
+    for (const h of head) html.push(`<th>${formatInline(h)}</th>`);
+    html.push("</tr></thead>");
+    if (body.length > 0) {
+      html.push("<tbody>");
+      for (const r of body) {
+        html.push("<tr>");
+        for (const c of r) html.push(`<td>${formatInline(c)}</td>`);
+        html.push("</tr>");
+      }
+      html.push("</tbody>");
+    }
+    html.push("</table></div>");
+    tableRows = [];
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      closeList();
+      flushTable();
+      continue;
+    }
+    if (line.startsWith("|") && line.includes("|", 1)) {
+      closeList();
+      if (!isTableSep(line)) {
+        tableRows.push(splitTableRow(line));
+      }
+      continue;
+    }
+    flushTable();
+
+    if (/^-{3,}$/.test(line)) {
+      closeList();
+      html.push("<hr />");
+      continue;
+    }
+    const ulMatch = line.match(/^[-*•]\s+(.*)$/);
+    const olMatch = line.match(/^\d+[.)]\s+(.*)$/);
+    const hMatch = line.match(/^#{1,4}\s+(.*)$/);
+
+    if (hMatch) {
+      closeList();
+      html.push(`<h4>${formatInline(hMatch[1])}</h4>`);
+    } else if (ulMatch) {
+      if (listType !== "ul") {
+        closeList();
+        listType = "ul";
+        html.push("<ul>");
+      }
+      html.push(`<li>${formatInline(ulMatch[1])}</li>`);
+    } else if (olMatch) {
+      if (listType !== "ol") {
+        closeList();
+        listType = "ol";
+        html.push("<ol>");
+      }
+      html.push(`<li>${formatInline(olMatch[1])}</li>`);
+    } else {
+      closeList();
+      html.push(`<p>${formatInline(line)}</p>`);
+    }
+  }
+  closeList();
+  flushTable();
+  return html.join("");
+}
+
+function renderCopilotMessages() {
+  const box = $("copilotMessages");
+  if (!box) return;
+  box.innerHTML = "";
+  if (state.copilotHistory.length === 0) {
+    const welcome = document.createElement("div");
+    welcome.className = "copilot-msg assistant";
+    welcome.innerHTML = "<p>Ask me anything about your active financial plan—your health score, debt payoff, tax headroom, or retirement Monte Carlo outlook. <em>(Educational summary only.)</em></p>";
+    box.appendChild(welcome);
+    return;
+  }
+  for (const m of state.copilotHistory) {
+    const div = document.createElement("div");
+    div.className = `copilot-msg ${m.role === "user" ? "user" : (m.isError ? "error" : "assistant")}`;
+    if (m.role === "user" || m.isError) {
+      div.textContent = m.content;
+    } else {
+      div.innerHTML = formatCopilotHtml(m.content);
+    }
+    box.appendChild(div);
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendCopilotMessage(message) {
+  if (!state.activePlanId) return;
+  $("copilotDrawer").classList.remove("hidden");
+  const priorHistory = state.copilotHistory.filter((m) => !m.isError).map((m) => ({ role: m.role, content: m.content }));
+  state.copilotHistory.push({ role: "user", content: message });
+  renderCopilotMessages();
+
+  const sendBtn = $("copilotSendBtn");
+  sendBtn.disabled = true;
+  sendBtn.textContent = "...";
+  try {
+    const res = await apiFetch(`/plans/${state.activePlanId}/chat`, {
+      method: "POST",
+      body: JSON.stringify({ message, history: priorHistory }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      state.copilotHistory.push({ role: "assistant", content: data.detail || "Copilot request failed.", isError: true });
+    } else {
+      state.copilotHistory.push({ role: "assistant", content: data.reply || "No reply returned." });
+    }
+  } catch (_err) {
+    state.copilotHistory.push({ role: "assistant", content: "Network error reaching Plan Insights.", isError: true });
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = "Send";
+    renderCopilotMessages();
+  }
+}
+
 async function fetchPdf(inline) {
   if (!state.activePlanId) return;
   const res = await apiFetch(`/plans/${state.activePlanId}/pdf${inline ? "?inline=true" : ""}`);
@@ -439,12 +605,15 @@ async function handleSignOut(callApi = true) {
   $("loginView").classList.remove("hidden");
   $("appView").classList.add("hidden");
   $("userControls").classList.add("hidden");
+  $("copilotToggleBtn").classList.add("hidden");
+  $("copilotDrawer").classList.add("hidden");
 }
 
 function showApp() {
   $("loginView").classList.add("hidden");
   $("appView").classList.remove("hidden");
   $("userControls").classList.remove("hidden");
+  $("copilotToggleBtn").classList.remove("hidden");
   $("userBadge").textContent = state.user ? state.user.username : "user";
 }
 
@@ -511,6 +680,22 @@ async function bootstrap() {
   $("runAndSyncBtn").addEventListener("click", () => executeActiveModule(true));
   $("previewPdfBtn").addEventListener("click", () => fetchPdf(true));
   $("downloadPdfBtn").addEventListener("click", () => fetchPdf(false));
+  $("copilotToggleBtn").addEventListener("click", toggleCopilotDrawer);
+  $("copilotCloseBtn").addEventListener("click", () => $("copilotDrawer").classList.add("hidden"));
+  document.querySelectorAll(".copilot-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const prompt = chip.getAttribute("data-prompt");
+      if (prompt) sendCopilotMessage(prompt);
+    });
+  });
+  $("copilotForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const msg = $("copilotInput").value.trim();
+    if (msg) {
+      $("copilotInput").value = "";
+      sendCopilotMessage(msg);
+    }
+  });
 
   if (state.token) {
     try {

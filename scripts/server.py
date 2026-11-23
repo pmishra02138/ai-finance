@@ -52,6 +52,7 @@ if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
 import db as finance_db
+from ai_copilot import CopilotAPIError, CopilotConfigError, ask_copilot
 from calculators import run_module
 from module_registry import VALID_MODULE_NAMES, get_modules_catalog
 from pdf import _demo_data, build_pdf
@@ -377,6 +378,31 @@ def run_plan_module(
         updated_plan = finance_db.update_plan(user["id"], plan_id, title, score, grade, normalized)
 
     return {"run": saved_run, "result": result, "updated_plan": updated_plan}
+
+
+class PlanChatRequest(BaseModel):
+    message: str
+    history: List[Dict[str, str]] = []
+
+
+@api.post("/plans/{plan_id}/chat")
+def chat_with_copilot(
+    plan_id: int,
+    body: PlanChatRequest,
+    user: Dict[str, Any] = Depends(get_current_user),
+) -> Dict[str, str]:
+    plan = finance_db.get_plan(user["id"], plan_id)
+    if plan is None:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    runs = finance_db.list_module_runs(user["id"], plan_id)
+    try:
+        return ask_copilot(body.message, body.history, plan, runs)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except CopilotConfigError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except CopilotAPIError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @api.get("/demo-data")
