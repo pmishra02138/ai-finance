@@ -98,4 +98,4 @@ if [ ! -d "${REPO_ROOT}/.venv" ]; then
 fi
 
 echo "Starting AI Personal Finance Advisor at http://${HOST}:${PORT} (default login: user / password) ..."
-exec uv run --no-sync uvicorn scripts.server:app --host "$HOST" --port "$PORT"
+exec uv run --no-sync python -m uvicorn scripts.server:app --host "$HOST" --port "$PORT"

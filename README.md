@@ -15,7 +15,7 @@
 `ai-finance` is a **unified single-port FastAPI + static SPA web application** (`http://localhost:8787`) powered by structured JSON module specifications (`specs/*.json`) and a modular Python calculation engine.
 
 Everything runs locally on your machine with **zero external LLM API keys or token costs**:
-- **Spec-Driven 5-Stage Financial Planning UI** covering 14 interactive modules across Baseline, Foundation, Growth, Horizons, and Synthesis.
+- **Spec-Driven 5-Stage Financial Planning UI** covering 13 interactive modules across Baseline, Foundation, Growth, Horizons, and Synthesis.
 - **Hybrid Deterministic + Monte Carlo Engine:** Exact deterministic math for budgeting, debt, taxes, and portfolio rebalancing, paired with fast seeded **1,000-trial Monte Carlo simulations** (showing probability of success + 10th / 50th / 90th percentile bands alongside deterministic baselines) for Retirement, FIRE, Goals, and Scenario Comparisons.
 - **SQLite Persistence (`data/ai_finance.db`)** with user accounts (seeded default `user` / `password` plus registration), saved plans, and per-module history.
 - **Professional 9-Page PDF Reports (`FINANCE-PLAN.pdf`)** generated via ReportLab with score gauges, category bars, allocation pie charts, payoff timelines, Monte Carlo retirement stress tests, and a 90-day action plan.
@@ -58,7 +58,7 @@ Open **`http://localhost:8787`** in your browser and sign in with **`user`** / *
 
 ---
 
-## 🧭 5-Stage Planning Workflow (14 Modules)
+## 🧭 5-Stage Planning Workflow (13 Modules)
 
 | Stage | Modules | Engine | What You Can Analyze |
 | :--- | :--- | :--- | :--- |
@@ -66,9 +66,9 @@ Open **`http://localhost:8787`** in your browser and sign in with **`user`** / *
 | **2. Foundation & Defense** | Budget & Cash Flow, Emergency Fund, Debt Payoff, Protection & Estate | Deterministic | 50/30/20 split, target runway (3–12 mos), High-APR vs. Low-APR Avalanche/Snowball payoff, full Insurance & Estate scorecard |
 | **3. Growth & Optimization** | Portfolio Review & Models, Tax Optimization | Deterministic | Age-based allocation drift, rebalancing trades + model ETF templates, 401(k)/HSA/IRA (Single & Married Filing Jointly) + age 50+ catch-ups |
 | **4. Horizons & Trade-Offs** | Retirement Planner, FIRE Calculator, Goal Planner, Scenario Compare | **Deterministic + Log-Normal Monte Carlo** | Employer match, withdrawal taxes, Social Security timing, ending home equity, and portfolio-linked 1,000-trial survival/win probabilities |
-| **5. Synthesis & Export** | Full Health Analysis, PDF Report Export | Deterministic | Composite Financial Health Score (0–100), letter grade (`A+`–`F`), and 9-page `FINANCE-PLAN.pdf` export |
+| **5. Synthesis & Export** | Full Health Analysis | Deterministic | Auto-synced 5-pillar Financial Health Score (0–100), letter grade (`A+`–`F`), and 9-page `FINANCE-PLAN.pdf` Preview/Download |
 
-Clicking **Run & Sync to Plan** in any module updates your master plan in SQLite and automatically recalculates your overall Financial Health Score, grade, and signal.
+Clicking **Save to My Plan** in any core module updates your master plan in SQLite and automatically recalculates your overall Financial Health Score, grade, and signal. Use **Preview Results** to explore what-if scenarios without changing your saved plan.
 
 ---
 

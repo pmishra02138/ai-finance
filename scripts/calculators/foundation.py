@@ -244,15 +244,52 @@ def calc_debt(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
     sn_months, sn_int, _ = _simulate_debt_payoff(accounts, extra, "snowball")
     int_saved = max(0.0, round(sn_int - av_int, 2))
 
-    # Separate high-APR consumer debt (>7%) from low-APR fixed debt (<=7%) in scoring
+    # Detect negative amortization (minimum payment < monthly interest when extra == 0)
+    neg_amort_alerts: List[str] = []
+    for acc in accounts:
+        bal = max(0.0, _f(acc.get("balance")))
+        apr = max(0.0, _f(acc.get("apr")))
+        min_pmt = max(0.0, _f(acc.get("min_payment")))
+        monthly_int = bal * (apr / 100.0 / 12.0)
+        if bal > 0 and min_pmt > 0 and min_pmt <= monthly_int and extra <= 0:
+            req_pmt = math.ceil(monthly_int + max(25.0, bal * 0.01))
+            neg_amort_alerts.append(
+                f"{acc.get('name', 'Debt')}: min payment ({_money(min_pmt)}/mo) is below monthly interest ({_money(monthly_int)}/mo) — pay at least {_money(req_pmt)}/mo to stop balance growth."
+            )
+
+    # Separate high-APR (>7%), mid-APR (5-7%), and low-APR (<=5%) fixed debt in scoring
     if total_bal <= 0:
         score = 100.0
     else:
         high_share = high_apr_bal / total_bal
+        mid_apr_bal = sum(_f(a.get("balance")) for a in accounts if 5.0 < _f(a.get("apr")) <= 7.0)
+        mid_share = mid_apr_bal / total_bal
         high_apr_penalty = high_share * min(45.0, weighted_apr * 2.2)
-        low_apr_penalty = (1.0 - high_share) * min(15.0, weighted_apr * 1.5)
-        duration_penalty = min(25.0, av_months * (0.45 if high_apr_bal > 0 else 0.12))
-        score = _clamp(98.0 - high_apr_penalty - low_apr_penalty - duration_penalty)
+        low_apr_penalty = (1.0 - high_share) * min(12.0, weighted_apr * 1.5)
+        if high_apr_bal > 0:
+            duration_penalty = min(25.0, av_months * 0.45)
+        elif mid_share > 0:
+            duration_penalty = min(12.0, av_months * 0.12)
+        else:
+            # Low-APR (<=5%) long-term amortized debt (e.g. 3% mortgage) carries minimal penalty
+            duration_penalty = min(5.0, av_months * 0.015)
+        neg_amort_penalty = 15.0 if neg_amort_alerts else 0.0
+        score = _clamp(98.0 - high_apr_penalty - low_apr_penalty - duration_penalty - neg_amort_penalty)
+
+    recs = (
+        ["Maintain zero high-interest consumer debt and redirect surplus into investments."]
+        if total_bal <= 0
+        else [
+            *neg_amort_alerts,
+            f"Direct {_money(extra)}/mo extra to '{av_order[0]['name']}' ({_pct(av_order[0]['apr'])} APR) first.",
+            (
+                f"Prioritize eliminating {_money(high_apr_bal)} in high-APR debt (>7%) before taxable investing."
+                if high_apr_bal > 0
+                else "All balances are <=7% APR — balance extra payoff against tax-advantaged retirement investing."
+            ),
+            f"Minimum payments total {_money(total_min)}/mo; automate all minimums to avoid late fees.",
+        ]
+    )
 
     return {
         "module": "finance-debt",
@@ -261,13 +298,17 @@ def calc_debt(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
         "summary": (
             "Debt-free! No active balances."
             if total_bal <= 0
-            else f"Avalanche pays off {_money(total_bal)} ({_money(high_apr_bal)} high-APR >7%) in {av_months} mos ({_money(av_int)} interest), saving {_money(int_saved)} vs. Snowball."
+            else (
+                f"WARNING: Negative amortization detected ({len(neg_amort_alerts)} account(s)) — minimum payments do not cover monthly interest."
+                if neg_amort_alerts
+                else f"Avalanche pays off {_money(total_bal)} ({_money(high_apr_bal)} high-APR >7%) in {av_months} mos ({_money(av_int)} interest), saving {_money(int_saved)} vs. Snowball."
+            )
         ),
         "metrics": [
             {"label": "Total Debt", "value": _money(total_bal), "tone": "good" if total_bal == 0 else "warn"},
             {"label": "High-APR Debt (>7%)", "value": _money(high_apr_bal), "tone": "good" if high_apr_bal == 0 else "bad"},
             {"label": "Low-APR Debt (<=7%)", "value": _money(low_apr_bal), "tone": "neutral"},
-            {"label": "Avalanche Payoff", "value": f"{av_months} mos ({_money(av_int)} int.)", "tone": "neutral"},
+            {"label": "Avalanche Payoff", "value": "Neg. Amortization!" if neg_amort_alerts else f"{av_months} mos ({_money(av_int)} int.)", "tone": "bad" if neg_amort_alerts else "neutral"},
             {"label": "Interest Saved vs Snowball", "value": _money(int_saved), "tone": "good"},
         ],
         "tables": [
@@ -296,19 +337,7 @@ def calc_debt(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
                 {"label": "Snowball", "value": sn_int},
             ],
         },
-        "recommendations": (
-            ["Maintain zero high-interest consumer debt and redirect surplus into investments."]
-            if total_bal <= 0
-            else [
-                f"Direct {_money(extra)}/mo extra to '{av_order[0]['name']}' ({_pct(av_order[0]['apr'])} APR) first.",
-                (
-                    f"Prioritize eliminating {_money(high_apr_bal)} in high-APR debt (>7%) before taxable investing."
-                    if high_apr_bal > 0
-                    else "All balances are <=7% APR — balance extra payoff against tax-advantaged retirement investing."
-                ),
-                f"Minimum payments total {_money(total_min)}/mo; automate all minimums to avoid late fees.",
-            ]
-        ),
+        "recommendations": recs[:4],
         "plan_patch": {
             "categories": {**(plan.get("categories") or {}), "debt": round(score, 1)},
             "debt": {

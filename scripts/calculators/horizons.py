@@ -56,8 +56,10 @@ def calc_retirement(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, A
 
     plus_200 = _fv_monthly(balance, total_monthly + 200, 0.06, years)
     plus_400 = _fv_monthly(balance, total_monthly + 400, 0.06, years)
-    score = _clamp((proj_mod / target * 100.0) if target > 0 else 100.0)
+    det_score = _clamp((proj_mod / target * 100.0) if target > 0 else 100.0)
 
+    # Dynamic drawdown horizon to age 95 (min 25 yrs) so early retirees face full longevity risk
+    drawdown_years = max(25, 95 - retire_age)
     mc = simulate_retirement_mc(
         current_balance=balance,
         monthly_contribution=total_monthly,
@@ -66,7 +68,7 @@ def calc_retirement(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, A
         annual_gross_spending=gross_annual_spend,
         social_security_annual=ss_annual,
         social_security_start_age=ss_start_age,
-        drawdown_years=int(consts.get("drawdown_years", 30)),
+        drawdown_years=drawdown_years,
         accum_return=port_ret,
         accum_vol=port_vol,
         retire_return=retire_ret,
@@ -74,6 +76,13 @@ def calc_retirement(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, A
         trials=int(consts.get("mc_trials", 1000)),
         seed=int(consts.get("mc_seed", 42)),
     )
+
+    # Blend deterministic baseline (45%) and Monte Carlo survival (55%), capping <80% survival below A-
+    mc_score = _clamp(mc["success_rate_pct"] * 1.1)
+    blended = 0.45 * det_score + 0.55 * mc_score
+    if mc["success_rate_pct"] < 80.0:
+        blended = min(blended, 79.0)
+    score = round(_clamp(blended), 1)
 
     mc_summary = {
         "trials": mc["trials"],
@@ -305,6 +314,8 @@ def calc_goals(inputs: Dict[str, Any], _plan: Dict[str, Any]) -> Dict[str, Any]:
         vehicle = "Diversified Index ETFs (70/30+)"
         vol = 0.13
 
+    mc_trials = int(consts.get("mc_trials", 1000))
+    mc_seed = int(consts.get("mc_seed", 42))
     mc = simulate_goal_mc(
         current_saved=current,
         monthly_contribution=req_monthly,
@@ -312,16 +323,38 @@ def calc_goals(inputs: Dict[str, Any], _plan: Dict[str, Any]) -> Dict[str, Any]:
         target_amount=target,
         expected_return=annual_return,
         volatility=vol,
-        trials=int(consts.get("mc_trials", 1000)),
-        seed=int(consts.get("mc_seed", 42)),
+        trials=mc_trials,
+        seed=mc_seed,
     )
+
+    # Binary search for an 80% Monte Carlo confidence monthly contribution when deterministic odds < 80%
+    conf_monthly = req_monthly
+    if mc["success_rate_pct"] < 80.0 and target > 0:
+        lo, hi = req_monthly, max(req_monthly * 2.5, (target - current) / months * 2.0 + 100.0)
+        for _ in range(14):
+            mid = (lo + hi) / 2.0
+            probe = simulate_goal_mc(
+                current_saved=current,
+                monthly_contribution=mid,
+                years=years,
+                target_amount=target,
+                expected_return=annual_return,
+                volatility=vol,
+                trials=250,
+                seed=mc_seed,
+            )
+            if probe["success_rate_pct"] >= 80.0:
+                hi = mid
+            else:
+                lo = mid
+        conf_monthly = hi
 
     mc_summary = {
         "trials": mc["trials"],
         "volatility_pct": mc["volatility_pct"],
         "baseline_label": f"Deterministic Required Save ({years:.1f} yrs)",
         "baseline_value": f"{_money(req_monthly)}/mo -> {_money(target)}",
-        "success_label": "On-Time Goal Probability",
+        "success_label": f"On-Time Odds @ Baseline (80% target: {_money(conf_monthly)}/mo)",
         "success_rate_pct": mc["success_rate_pct"],
         "percentiles": [
             {"label": "10th Pct (Downside)", "value": _money(mc["p10"]), "raw": mc["p10"]},
@@ -339,13 +372,14 @@ def calc_goals(inputs: Dict[str, Any], _plan: Dict[str, Any]) -> Dict[str, Any]:
         "score": round(_clamp(pct_done), 1),
         "grade": None,
         "summary": (
-            f"Goal '{name}': deterministic baseline needs {_money(req_monthly)}/mo for {years:.1f} yrs to reach {_money(target)} "
-            f"(Monte Carlo probability: {mc['success_rate_pct']:.1f}%, 10th-pct downside {_money(mc['p10'])})."
+            f"Goal '{name}': deterministic baseline needs {_money(req_monthly)}/mo ({mc['success_rate_pct']:.1f}% MC odds); "
+            f"save {_money(conf_monthly)}/mo for >=80% Monte Carlo confidence."
         ),
         "metrics": [
             {"label": "Target Amount", "value": _money(target), "tone": "neutral"},
-            {"label": "Required Monthly Save", "value": _money(req_monthly), "tone": "good" if req_monthly == 0 else "warn"},
-            {"label": "MC On-Time Odds", "value": _pct(mc["success_rate_pct"]), "tone": "good" if mc["success_rate_pct"] >= 60 else "warn"},
+            {"label": "Baseline Monthly Save", "value": _money(req_monthly), "tone": "good" if req_monthly == 0 else "neutral"},
+            {"label": "80% Confidence Save", "value": f"{_money(conf_monthly)}/mo", "tone": "good"},
+            {"label": "MC On-Time Odds (Base)", "value": _pct(mc["success_rate_pct"]), "tone": "good" if mc["success_rate_pct"] >= 75 else "warn"},
             {"label": "Recommended Vehicle", "value": vehicle, "tone": "neutral"},
         ],
         "monte_carlo": mc_summary,
@@ -354,7 +388,8 @@ def calc_goals(inputs: Dict[str, Any], _plan: Dict[str, Any]) -> Dict[str, Any]:
                 "title": "Timeline Adjustment Scenarios",
                 "columns": ["Timeline", "Required Monthly Contribution"],
                 "rows": [
-                    [f"{years:.1f} years (target)", _money(req_monthly)],
+                    [f"{years:.1f} years (deterministic)", _money(req_monthly)],
+                    [f"{years:.1f} years (80% MC confidence)", _money(conf_monthly)],
                     [f"{years + 2:.1f} years (+2 yrs)", _money(max(0.0, (target - current * ((1 + r) ** int((years + 2) * 12))) * (r / (((1 + r) ** int((years + 2) * 12)) - 1) if r > 0 else 1 / ((years + 2) * 12))))],
                 ],
             }
@@ -370,8 +405,7 @@ def calc_goals(inputs: Dict[str, Any], _plan: Dict[str, Any]) -> Dict[str, Any]:
             ],
         },
         "recommendations": [
-            f"Automate {_money(req_monthly)}/mo into a dedicated sub-account ({vehicle}).",
-            f"Add a ~10% contribution buffer if you want higher than {mc['success_rate_pct']:.0f}% certainty under market volatility.",
+            f"Automate {_money(conf_monthly)}/mo into a dedicated sub-account ({vehicle}) for >=80% on-time certainty (baseline deterministic minimum is {_money(req_monthly)}/mo).",
         ],
         "plan_patch": {},
     }

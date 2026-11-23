@@ -68,7 +68,9 @@ def get_modules_catalog() -> Dict[str, Any]:
                 "stage_id": stage["id"],
                 "stage_title": stage["title"],
                 "engine": mod.get("engine", "deterministic"),
+                "syncs_to_plan": mod.get("syncs_to_plan", True),
                 "description": mod.get("description", ""),
+                "form_note": mod.get("form_note", ""),
                 "fields": mod.get("fields", []),
             }
             enriched.append(entry)

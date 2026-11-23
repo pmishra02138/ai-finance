@@ -78,17 +78,15 @@ function renderPlanHeader() {
     <div class="metric-card"><div class="metric-label">Total Debt</div><div class="metric-value">$${Math.round(totalDebt).toLocaleString()}</div></div>
     <div class="metric-card"><div class="metric-label">Retirement Goal</div><div class="metric-value">$${Number(ret.target_balance || 0).toLocaleString()}</div></div>
   `;
-  const actions = (p.action_items || []).slice(0, 5);
-  $("overviewActions").innerHTML = actions.length
-    ? `<div class="recs-block"><h4>Top Action Items</h4><ul>${actions.map((a) => `<li><strong>[${esc(a.priority || "Med")}]</strong> ${esc(a.action || "")}</li>`).join("")}</ul></div>`
-    : "";
+  const actions = (p.action_items || []).slice(0, 6);
+  $("overviewActions").innerHTML = window.FinanceModules.renderActionItems(actions, "Top Prioritized Action Items");
 }
 
 function renderStageNav() {
   const nav = $("stageNav");
   nav.innerHTML = "";
   const completedCount = Object.keys(state.moduleRuns).length;
-  $("completionPill").textContent = `${completedCount}/${state.catalog.modules.length || 14}`;
+  $("completionPill").textContent = `${completedCount}/${state.catalog.modules.length || 13}`;
 
   for (const stage of state.catalog.stages || []) {
     const group = document.createElement("div");
@@ -116,6 +114,8 @@ function renderStageNav() {
 
 function openOverview() {
   state.activeModuleName = null;
+  $("overviewNavBtn").classList.add("active");
+  $("scoreBannerCard").classList.remove("hidden");
   $("overviewPanel").classList.remove("hidden");
   $("modulePanel").classList.add("hidden");
   renderPlanHeader();
@@ -138,6 +138,9 @@ function openModule(moduleName) {
   const meta = (state.catalog.modules || []).find((m) => m.name === moduleName);
   if (!meta) return;
   state.activeModuleName = moduleName;
+  $("overviewNavBtn").classList.remove("active");
+  // Show full Financial Health Score + PDF banner only on Plan Overview and Full Health Analysis
+  $("scoreBannerCard").classList.toggle("hidden", moduleName !== "finance-analyze");
   $("overviewPanel").classList.add("hidden");
   $("modulePanel").classList.remove("hidden");
   $("moduleHeaderCard").dataset.stage = meta.stage_id;
@@ -145,14 +148,25 @@ function openModule(moduleName) {
   $("moduleStageKicker").textContent = meta.stage_title;
   $("moduleHeading").textContent = meta.label;
   $("moduleDesc").textContent = meta.description;
+  $("runAndSyncBtn").classList.toggle("hidden", meta.syncs_to_plan === false);
 
   const saved = state.moduleRuns[moduleName];
   setModuleStatusBadge(saved ? "Saved" : "");
 
   const fields = window.FinanceModules.getFields(meta, state.activePayload, saved && saved.inputs);
-  window.FinanceModules.renderForm($("moduleFormContainer"), fields);
+  window.FinanceModules.renderForm($("moduleFormContainer"), fields, meta.form_note || "");
   window.FinanceModules.renderResult($("moduleResultContainer"), saved && saved.outputs);
   renderStageNav();
+
+  // If Full Health Analysis was run earlier (or any upstream pillar changed), auto-refresh with latest synced scores
+  if (moduleName === "finance-analyze" && state.activePlanId) {
+    const stale =
+      !saved ||
+      fields.some((f) => saved.inputs && Number(saved.inputs[f.key]) !== Number(f.value));
+    if (stale) {
+      executeActiveModule(false);
+    }
+  }
 }
 
 async function executeActiveModule(syncToPlan) {
@@ -260,22 +274,42 @@ async function loadInitialAppData() {
 
 function openNewPlanPrompt() {
   $("newPlanNameInput").value = "";
-  $("newPlanRow").classList.remove("hidden");
+  $("newPlanTemplate").value = "sample";
+  $("newPlanModal").classList.remove("hidden");
   $("newPlanNameInput").focus();
 }
 
 function closeNewPlanPrompt() {
-  $("newPlanRow").classList.add("hidden");
+  $("newPlanModal").classList.add("hidden");
 }
 
 async function createNewPlan() {
   const customName = $("newPlanNameInput").value.trim();
-  const demoRes = await apiFetch("/demo-data");
-  const demo = await demoRes.json();
-  demo.client_name = customName || `Financial Plan (${new Date().toLocaleDateString()})`;
+  const template = $("newPlanTemplate").value;
+  const planTitle = customName || `Financial Plan (${new Date().toLocaleDateString()})`;
+  let payload;
+  if (template === "blank") {
+    payload = {
+      client_name: planTitle,
+      health_score: 0,
+      grade: "--",
+      signal: "New Plan — Run Modules to Score",
+      categories: { cash_flow: 0, debt: 0, investments: 0, retirement: 0, protection: 0 },
+      cash_flow: { monthly_income: 0, gross_annual_income: 0, expenses: [] },
+      debt: { accounts: [] },
+      investments: { total_value: 0, allocation: [] },
+      retirement: { current_age: 35, retirement_age: 65, current_balance: 0, target_balance: 0, monthly_contribution: 0 },
+      protection: { items: [] },
+      action_items: [],
+    };
+  } else {
+    const demoRes = await apiFetch("/demo-data");
+    payload = await demoRes.json();
+    payload.client_name = planTitle;
+  }
   const res = await apiFetch("/plans", {
     method: "POST",
-    body: JSON.stringify({ title: demo.client_name, payload: demo }),
+    body: JSON.stringify({ title: planTitle, payload }),
   });
   if (!res.ok) {
     showStatus("Failed to create plan", true);
@@ -285,7 +319,7 @@ async function createNewPlan() {
   closeNewPlanPrompt();
   await refreshPlanListOnly();
   await selectPlan(created.id);
-  showStatus(`Created "${demo.client_name}".`);
+  showStatus(`Created "${planTitle}".`);
 }
 
 function requestDeletePlanConfirmation() {
@@ -423,12 +457,16 @@ async function bootstrap() {
   $("deletePlanBtn").addEventListener("click", requestDeletePlanConfirmation);
   $("confirmCancelBtn").addEventListener("click", closeDeleteModal);
   $("confirmDeleteBtn").addEventListener("click", confirmDeleteActivePlan);
+  $("newPlanModal").addEventListener("click", (e) => {
+    if (e.target === $("newPlanModal")) closeNewPlanPrompt();
+  });
   $("confirmModal").addEventListener("click", (e) => {
     if (e.target === $("confirmModal")) closeDeleteModal();
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !$("confirmModal").classList.contains("hidden")) {
-      closeDeleteModal();
+    if (e.key === "Escape") {
+      if (!$("confirmModal").classList.contains("hidden")) closeDeleteModal();
+      if (!$("newPlanModal").classList.contains("hidden")) closeNewPlanPrompt();
     }
   });
   $("runModuleBtn").addEventListener("click", () => executeActiveModule(false));

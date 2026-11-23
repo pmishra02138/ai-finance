@@ -8,7 +8,7 @@
 
 ## 1. 5-Stage Guided User Workflow
 
-Users can work top-to-bottom or jump to any module. Clicking **Run & Sync to Plan** saves that module's inputs/results, patches the active financial plan in SQLite, and automatically recalculates the composite Financial Health Score.
+Users can work top-to-bottom or jump to any module. Clicking **Save to My Plan** saves that module's inputs/results, patches the active financial plan in SQLite, and automatically recalculates the composite Financial Health Score (while **Preview Results** lets you test what-if scenarios without modifying your plan).
 
 ```mermaid
 flowchart LR
@@ -18,7 +18,7 @@ flowchart LR
     S1 --> S2["Stage 2: Foundation\n• Budget 50/30/20\n• Emergency Fund\n• Debt Payoff\n• Protection & Estate"]
     S2 --> S3["Stage 3: Growth\n• Portfolio Review & Models\n• Tax Optimization"]
     S3 --> S4["Stage 4: Horizons (MC)\n• Retirement Planner\n• FIRE Calculator\n• Goal Planner\n• Scenario Compare"]
-    S4 --> S5["Stage 5: Synthesis\n• Full Health Analysis\n• PDF Report Export"]
+    S4 --> S5["Stage 5: Synthesis\n• Full Health Analysis\n• Preview / Download PDF"]
 
     S1 -. "Run & Sync" .-> MasterPlan[("Master Plan in SQLite\n(Auto-recalculates Score)")]
     S2 -. "Run & Sync" .-> MasterPlan

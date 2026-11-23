@@ -53,7 +53,7 @@ Every scored module and the composite Financial Health Score map a `0–100` num
 
 #### 1.2 Net Worth Tracker (`finance-networth`) — *Deterministic*
 - **Inputs:** Cash, Investments & Retirement, Real Estate, Other Assets, Mortgage, Other Debts, Current Age, **Gross Annual Income (Pre-Tax)**.
-- **Core Math:** `Net Worth = Assets − Liabilities`, benchmarked against *Millionaire Next Door* (`Age × Gross Annual Income / 10` → PAW / AAW / UAW) and next wealth milestone (`$100k`–`$10M`).
+- **Core Math:** `Net Worth = Assets − Liabilities`, benchmarked against *Millionaire Next Door* (`Age × Gross Annual Income / 10` for age `>= 35`; early-career ramp `max(0.25, (Age − 22) × 0.15) × Income` under age `35`) and next wealth milestone (`$100k`–`$10M`).
 - **Plan Sync:** Updates `investments.total_value` and `cash_flow.gross_annual_income`.
 
 ---
@@ -73,7 +73,7 @@ Every scored module and the composite Financial Health Score map a `0–100` num
 #### 2.3 Debt Payoff (`finance-debt`) — *Deterministic*
 - **Inputs:** Extra Monthly Payment, Debt Accounts (`name`, `balance`, `apr`, `min_payment`).
 - **Core Math:** Month-by-month Avalanche vs. Snowball amortization with minimum-payment rollover.
-- **High-APR vs. Low-APR Scoring:** Separates **High-APR consumer debt (`> 7%`)** from **Low-APR fixed debt (`<= 7%`)** so high-interest credit cards are heavily penalized while low-rate mortgages/federal loans carry a gentle duration weight.
+- **High-APR vs. Low-APR & Negative Amortization:** Separates high-APR (`> 7%`), mid-APR (`5–7%`), and low-APR (`<= 5%`, e.g., 3% fixed mortgage) debt so low-rate amortized loans aren't unfairly penalized, and flags **Negative Amortization** whenever minimum payments fail to cover monthly interest.
 - **Plan Sync:** Updates `categories.debt` and `debt`.
 
 #### 2.4 Protection & Estate (`finance-protection`) — *Deterministic*
@@ -106,7 +106,7 @@ Every scored module and the composite Financial Health Score map a `0–100` num
 #### 4.1 Retirement Planner (`finance-retirement`) — *Deterministic + Log-Normal Monte Carlo*
 - **Inputs:** Current Age, Retirement Age, Current Balance, Monthly Contribution, **Monthly Employer 401(k) Match**, Desired After-Tax Annual Spend, **Effective Retirement Tax Rate (%)**, Expected Annual Social Security, **Social Security Start Age**.
 - **Deterministic Baseline:** Grosses up spending for withdrawal taxes (`Net Spend / (1 − Tax Rate)`), adds bridge funding for years between `retirement_age` and `social_security_start_age`, and models `5%` / `6%` / `7%` + `+$200/$400` scenarios including employer match.
-- **Monte Carlo Stress Test (1,000 trials):** Portfolio-linked log-normal accumulation + 30-year drawdown where Social Security begins only at `social_security_start_age`.
+- **Monte Carlo Stress Test (1,000 trials):** Portfolio-linked log-normal accumulation + dynamic drawdown (`max(25, 95 − Retirement Age)` years) where Social Security begins only at `social_security_start_age`. Retirement score blends deterministic fundedness (`45%`) and Monte Carlo survival (`55%`, capped at `79` if survival `< 80%`).
 - **Plan Sync:** Updates `categories.retirement` and `retirement` (including `monte_carlo` stats for PDF Page 6).
 
 #### 4.2 FIRE Calculator (`finance-fire`) — *Deterministic + Log-Normal Monte Carlo*
@@ -116,7 +116,7 @@ Every scored module and the composite Financial Health Score map a `0–100` num
 
 #### 4.3 Goal Planner (`finance-goals`) — *Deterministic + Log-Normal Monte Carlo*
 - **Inputs:** Goal Name, Target Amount, Currently Saved, Years Until Goal, Expected Annual Return (%).
-- **Deterministic + MC:** Exact required monthly contribution, horizon-matched investment vehicle, and log-normal on-time probability + 10th/50th/90th percentile ending values.
+- **Deterministic + MC:** Exact required monthly contribution, an **80% Monte Carlo Confidence Save** solved via binary search, horizon-matched investment vehicle, and 10th/50th/90th percentile ending values.
 
 #### 4.4 Scenario Compare (`finance-compare`) — *Deterministic + Log-Normal Monte Carlo*
 - **Inputs:** Scenario A & B names, upfront costs, monthly costs, monthly investments, **Ending Asset Equity (e.g., Home Equity)**, Horizon (years), Expected Return (%).
@@ -127,7 +127,5 @@ Every scored module and the composite Financial Health Score map a `0–100` num
 ### Stage 5: Synthesis & Export (`specs/synthesis.json` → `calculators/synthesis.py`)
 
 #### 5.1 Full Health Analysis (`finance-analyze`) — *Deterministic*
-- Equal-weighted (`20%` each) composite of all 5 pillars (`Cash Flow`, `Debt`, `Investments`, `Retirement`, `Protection`).
-
-#### 5.2 PDF Report Export (`finance-report-pdf`) — *Deterministic*
-- Renders the **9-page `FINANCE-PLAN.pdf`** (`scripts/pdf/pages.py`) including the live synced Protection Scorecard (Page 7) and Retirement Monte Carlo Stress Test (Page 6).
+- Equal-weighted (`20%` each) composite of all 5 pillars (`Cash Flow`, `Debt`, `Investments`, `Retirement`, `Protection`), read-only and auto-synced from your saved modules.
+- Displays the full **Financial Health Score** gauge banner and **Preview PDF / Download PDF** buttons for exporting the **9-page `FINANCE-PLAN.pdf`** (`scripts/pdf/pages.py`), including the live synced Protection Scorecard (Page 7) and Retirement Monte Carlo Stress Test (Page 6).

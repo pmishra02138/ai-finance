@@ -7,22 +7,15 @@
       "name": "finance-analyze",
       "label": "Full Health Analysis",
       "engine": "deterministic",
-      "description": "Combine all five financial pillars into a composite Financial Health Score (0–100), grade, and top priority focus.",
+      "description": "Review your combined 5-pillar Financial Health Score, grade, and top priority focus, then preview or download your 9-page PDF report above.",
+      "form_note": "These 5 pillar scores are automatically pulled from your previous saved modules and are read-only here. To change any score, update that module and click 'Save to My Plan'.",
       "fields": [
-        {"key": "cash_flow_score", "label": "Cash Flow Score (0-100)", "type": "number", "default": 78, "plan_path": "categories.cash_flow"},
-        {"key": "debt_score", "label": "Debt Score (0-100)", "type": "number", "default": 52, "plan_path": "categories.debt"},
-        {"key": "investments_score", "label": "Investments Score (0-100)", "type": "number", "default": 71, "plan_path": "categories.investments"},
-        {"key": "retirement_score", "label": "Retirement Score (0-100)", "type": "number", "default": 64, "plan_path": "categories.retirement"},
-        {"key": "protection_score", "label": "Protection Score (0-100)", "type": "number", "default": 58, "plan_path": "categories.protection"}
+        {"key": "cash_flow_score", "label": "Cash Flow Score", "type": "number", "default": 78, "plan_path": "categories.cash_flow", "prefer_plan": true, "read_only": true},
+        {"key": "debt_score", "label": "Debt Score", "type": "number", "default": 52, "plan_path": "categories.debt", "prefer_plan": true, "read_only": true},
+        {"key": "investments_score", "label": "Investments Score", "type": "number", "default": 71, "plan_path": "categories.investments", "prefer_plan": true, "read_only": true},
+        {"key": "retirement_score", "label": "Retirement Score", "type": "number", "default": 64, "plan_path": "categories.retirement", "prefer_plan": true, "read_only": true},
+        {"key": "protection_score", "label": "Protection Score", "type": "number", "default": 58, "plan_path": "categories.protection", "prefer_plan": true, "read_only": true}
       ],
-      "constants": {}
-    },
-    {
-      "name": "finance-report-pdf",
-      "label": "PDF Report Export",
-      "engine": "deterministic",
-      "description": "Review your synced plan readiness and export a polished 9-page PDF financial report.",
-      "fields": [],
       "constants": {}
     }
   ]

@@ -50,4 +50,4 @@ if (-not (Test-Path (Join-Path $RepoRoot ".venv"))) {
 }
 
 Write-Host "Starting AI Personal Finance Advisor at http://${HostAddress}:${Port} (default login: user / password) ..." -ForegroundColor Green
-uv run --no-sync uvicorn scripts.server:app --host $HostAddress --port "$Port"
+uv run --no-sync python -m uvicorn scripts.server:app --host $HostAddress --port "$Port"

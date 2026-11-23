@@ -3,19 +3,25 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI Personal Finance Advisor — Unified Planning Hub</title>
-  <link rel="stylesheet" href="/styles.css?v=2.2" />
+  <title>FinPlan — Personal Financial Planning Hub</title>
+  <link rel="stylesheet" href="/styles.css?v=2.6" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
       <span class="brand-dot"></span>
       <div>
-        <h1>AI Personal Finance Advisor</h1>
-        <p class="subtitle">Personal Financial Planning Hub &amp; PDF Report Generator</p>
+        <h1>FinPlan</h1>
+        <p class="subtitle">Personal Financial Planning Hub</p>
       </div>
     </div>
     <div id="userControls" class="user-controls hidden">
+      <div class="topbar-plan-switcher">
+        <select id="planSelect" class="topbar-plan-select" aria-label="Select Financial Plan"></select>
+        <button id="newPlanBtn" class="btn primary sm" type="button">+ New Plan</button>
+        <button id="deletePlanBtn" class="btn topbar-danger sm" type="button" title="Delete active plan">Delete</button>
+      </div>
+      <span class="topbar-divider" aria-hidden="true"></span>
       <span id="userBadge" class="badge"></span>
       <button id="logoutBtn" class="btn secondary sm" type="button">Log Out</button>
     </div>
@@ -70,36 +76,18 @@
     <section id="appView" class="app-layout hidden">
       <aside class="sidebar">
         <div class="card sidebar-card">
-          <div class="sidebar-header">
-            <h2>Active Plan</h2>
-            <button id="newPlanBtn" class="btn primary sm" type="button">+ New</button>
-          </div>
-          <div id="newPlanRow" class="new-plan-row hidden">
-            <input id="newPlanNameInput" type="text" placeholder="e.g. 2027 Retirement Plan" maxlength="80" />
-            <div class="new-plan-btns">
-              <button id="confirmNewPlanBtn" class="btn primary sm" type="button">Create</button>
-              <button id="cancelNewPlanBtn" class="btn ghost sm" type="button">Cancel</button>
-            </div>
-          </div>
-          <select id="planSelect" class="plan-select" aria-label="Select Financial Plan"></select>
-          <div class="plan-mini-actions">
-            <button id="overviewNavBtn" class="btn ghost sm full" type="button">Plan Overview</button>
-            <button id="deletePlanBtn" class="btn ghost-danger sm" type="button" title="Delete active plan">Delete Plan</button>
-          </div>
-        </div>
-
-        <div class="card sidebar-card">
-          <div class="sidebar-header">
+          <button id="overviewNavBtn" class="overview-nav-btn active" type="button">Plan Overview</button>
+          <div class="sidebar-header" style="margin-top:12px;">
             <h2>Planning Modules</h2>
-            <span id="completionPill" class="pill sm">0/14</span>
+            <span id="completionPill" class="pill sm">0/13</span>
           </div>
           <nav id="stageNav" class="stage-nav"></nav>
         </div>
       </aside>
 
       <div class="content">
-        <!-- Plan Header Banner -->
-        <div class="card score-banner">
+        <!-- Plan Header Banner (shown on Plan Overview & Full Health Analysis) -->
+        <div id="scoreBannerCard" class="card score-banner">
           <div class="score-main">
             <div id="gaugeContainer"></div>
             <div>
@@ -146,8 +134,8 @@
             <div id="moduleFormContainer" style="margin-top:16px;"></div>
 
             <div class="module-actions">
-              <button id="runModuleBtn" class="btn primary" type="button">Run Calculator</button>
-              <button id="runAndSyncBtn" class="btn blue" type="button">Run &amp; Sync to Plan</button>
+              <button id="runModuleBtn" class="btn primary" type="button">Preview Results</button>
+              <button id="runAndSyncBtn" class="btn blue" type="button">Save to My Plan</button>
             </div>
           </div>
 
@@ -161,6 +149,29 @@
   </main>
 
   <div id="statusBanner" class="status-toast hidden" role="status" aria-live="polite"></div>
+
+  <!-- New Plan Modal -->
+  <div id="newPlanModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="newPlanModalTitle">
+    <div class="modal-card modal-card-primary">
+      <h3 id="newPlanModalTitle">Create New Financial Plan</h3>
+      <p class="muted" style="margin-bottom:14px;">Give your plan a name and choose how you'd like to start.</p>
+      <label style="margin-bottom:12px;">
+        Plan Name
+        <input id="newPlanNameInput" type="text" placeholder="e.g. 2027 Family Plan" maxlength="80" />
+      </label>
+      <label style="margin-bottom:18px;">
+        Starting Point
+        <select id="newPlanTemplate">
+          <option value="sample">Start from Sample Plan (pre-filled example)</option>
+          <option value="blank">Start Blank (empty plan)</option>
+        </select>
+      </label>
+      <div class="modal-actions">
+        <button id="cancelNewPlanBtn" class="btn ghost" type="button">Cancel</button>
+        <button id="confirmNewPlanBtn" class="btn primary" type="button">Create Plan</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Professional Delete Confirmation Modal -->
   <div id="confirmModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
@@ -178,8 +189,8 @@
     <strong>Disclaimer:</strong> For educational and informational purposes only. This is NOT financial, investment, tax, or legal advice.
   </footer>
 
-  <script src="/charts.js?v=2.2"></script>
-  <script src="/modules.js?v=2.2"></script>
-  <script src="/app.js?v=2.2"></script>
+  <script src="/charts.js?v=2.6"></script>
+  <script src="/modules.js?v=2.6"></script>
+  <script src="/app.js?v=2.6"></script>
 </body>
 </html>

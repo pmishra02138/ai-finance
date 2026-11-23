@@ -196,7 +196,9 @@ def calc_taxes(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
 
     used_total = cur_401k + cur_hsa + cur_ira
     avail_total = limit_401k + limit_hsa + limit_ira
-    score = _clamp((used_total / avail_total * 100.0) if avail_total > 0 else 80.0)
+    # Score against realistic savings capacity (~22% of gross income) rather than full statutory max for moderate earners
+    realistic_cap = min(avail_total, max(limit_hsa + 3000.0, gross_income * 0.22)) if gross_income > 0 else avail_total
+    score = _clamp((used_total / realistic_cap * 100.0) if realistic_cap > 0 else 80.0)
 
     recs = [
         f"Prioritize HSA ({_money(rem_hsa)} remaining) and 401(k) ({_money(rem_401k)} remaining) to capture {_money(save_401k + save_hsa)}/yr.",

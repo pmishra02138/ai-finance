@@ -18,10 +18,10 @@ from module_registry import VALID_MODULE_NAMES, get_modules_catalog
 
 
 class TestModuleRegistryAndCalculators(unittest.TestCase):
-    def test_catalog_has_all_14_modules_in_5_stages(self) -> None:
+    def test_catalog_has_all_13_modules_in_5_stages(self) -> None:
         cat = get_modules_catalog()
         self.assertEqual(len(cat["stages"]), 5)
-        self.assertEqual(cat["total_modules"], 14)
+        self.assertEqual(cat["total_modules"], 13)
         self.assertEqual(set(CALCULATORS.keys()), VALID_MODULE_NAMES)
         for mod in cat["modules"]:
             self.assertTrue(mod["description"], f"Missing description for {mod['name']}")
@@ -116,7 +116,6 @@ class TestModuleRegistryAndCalculators(unittest.TestCase):
             "finance-portfolio",
             "finance-taxes",
             "finance-analyze",
-            "finance-report-pdf",
         )
 
         start = time.perf_counter()
@@ -201,6 +200,45 @@ class TestModuleRegistryAndCalculators(unittest.TestCase):
         cmp_no_eq = run_module("finance-compare", {"scenario_a_ending_asset": 0, "scenario_b_ending_asset": 0}, demo)
         cmp_with_eq = run_module("finance-compare", {"scenario_a_ending_asset": 0, "scenario_b_ending_asset": 500000}, demo)
         self.assertNotEqual(cmp_no_eq["metrics"][2]["value"], cmp_with_eq["metrics"][2]["value"])
+
+    def test_financial_audit_fixes(self) -> None:
+        demo = _demo_data()
+
+        # 1. Retirement blends MC survival & scales drawdown to age 95
+        ret_demo = run_module("finance-retirement", {}, demo)
+        self.assertLessEqual(ret_demo["score"], 79.0)  # 73.1% MC survival cannot score 100/A+
+        ret_early = run_module("finance-retirement", {"retirement_age": 55}, demo)
+        self.assertIn("40-Yr", ret_early["monte_carlo"]["success_label"])
+
+        # 2. Goal Planner reports an 80% MC Confidence monthly target >= baseline
+        goal = run_module("finance-goals", {}, demo)
+        self.assertEqual(goal["metrics"][2]["label"], "80% Confidence Save")
+
+        # 3. Debt detects negative amortization & scores 3% mortgage fairly
+        neg = run_module("finance-debt", {"accounts": [{"name": "Card", "balance": 10000, "apr": 24, "min_payment": 150}], "extra_monthly_payment": 0}, {})
+        self.assertIn("Negative amortization", neg["summary"])
+        mtg = run_module("finance-debt", {"accounts": [{"name": "Mortgage", "balance": 400000, "apr": 3.0, "min_payment": 1700}], "extra_monthly_payment": 0}, {})
+        self.assertGreaterEqual(mtg["score"], 85.0)
+
+        # 4. Tax Optimization scores moderate earners fairly
+        tax_50k = run_module("finance-taxes", {"gross_annual_income": 50000, "marginal_tax_rate": 12, "current_401k": 3000}, {})
+        self.assertGreaterEqual(tax_50k["score"], 25.0)
+
+        # 5. Early-career Net Worth benchmark doesn't crush age 26 high earners
+        nw_26 = run_module("finance-networth", {"age": 26, "annual_income": 120000, "cash_assets": 20000, "investment_assets": 30000, "other_assets": 0, "other_debt": 0}, {})
+        self.assertGreaterEqual(nw_26["score"], 60.0)
+
+        # 6. Dynamic action items drop resolved items
+        clean_plan = {
+            **demo,
+            "categories": {"cash_flow": 90, "debt": 95, "investments": 90, "retirement": 90, "protection": 95},
+            "debt": {"accounts": []},
+            "protection": {"items": [{"name": "Will / Estate Plan", "status": "Good", "recommendation": "OK"}]},
+            "investments": {"allocation": [{"name": "US Stocks", "pct": 50, "target_pct": 50}]},
+            "retirement": {"monte_carlo": {"success_rate_pct": 90.0}},
+        }
+        syn = run_module("finance-analyze", {}, clean_plan)
+        self.assertFalse(any("Will" in a["action"] and "CRITICAL" in a["action"] for a in syn["action_items"]))
 
 
 if __name__ == "__main__":

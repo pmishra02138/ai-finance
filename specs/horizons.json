@@ -33,6 +33,7 @@
       "name": "finance-fire",
       "label": "FIRE Calculator",
       "engine": "hybrid_monte_carlo",
+      "syncs_to_plan": false,
       "description": "Calculate Lean, Regular, Fat, and Coast FI targets (after withdrawal taxes) alongside a portfolio-linked 40-year log-normal Monte Carlo survival stress test.",
       "fields": [
         {"key": "annual_expenses", "label": "Expected After-Tax Annual Expenses ($)", "type": "number", "default": 60000},
@@ -54,6 +55,7 @@
       "name": "finance-goals",
       "label": "Goal Planner",
       "engine": "hybrid_monte_carlo",
+      "syncs_to_plan": false,
       "description": "Plan major milestones with required monthly savings, recommended investment vehicles, and log-normal Monte Carlo probability of hitting your target on time.",
       "fields": [
         {"key": "goal_name", "label": "Goal Name", "type": "text", "default": "House Down Payment"},
@@ -71,6 +73,7 @@
       "name": "finance-compare",
       "label": "Scenario Compare",
       "engine": "hybrid_monte_carlo",
+      "syncs_to_plan": false,
       "description": "Compare two financial choices side-by-side over time including opportunity cost, ending asset equity (e.g., home equity), and shared-path Monte Carlo win probability.",
       "fields": [
         {"key": "scenario_a_name", "label": "Scenario A Name", "type": "text", "default": "Rent & Invest Difference"},

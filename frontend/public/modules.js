@@ -49,7 +49,7 @@ window.FinanceModules = (function () {
     const specFields = (moduleMeta && Array.isArray(moduleMeta.fields) ? moduleMeta.fields : []) || [];
     return specFields.map((f) => {
       const baseVal = resolveFieldDefault(f, plan || {});
-      const hasSaved = savedInputs && savedInputs[f.key] !== undefined;
+      const hasSaved = !f.prefer_plan && savedInputs && savedInputs[f.key] !== undefined;
       let val = hasSaved ? savedInputs[f.key] : baseVal;
       if (f.type === "json" && typeof val !== "string") {
         val = JSON.stringify(val, null, 2);
@@ -70,11 +70,12 @@ window.FinanceModules = (function () {
     `;
   }
 
-  function renderForm(container, fields) {
+  function renderForm(container, fields, formNote = "") {
     if (!fields.length) {
-      container.innerHTML = `<p class="muted">This module uses your active synced financial plan directly. Click <strong>Run &amp; Sync to Plan</strong> or export your 9-page PDF below.</p>`;
+      container.innerHTML = `<p class="muted">This module uses your active saved financial plan directly. Click <strong>Preview Results</strong> to check readiness or export your 9-page PDF above.</p>`;
       return;
     }
+    const noteHtml = formNote ? `<div class="form-note">${esc(formNote)}</div>` : "";
     const html = fields
       .map((f) => {
         const id = `module_field_${f.key}`;
@@ -107,10 +108,11 @@ window.FinanceModules = (function () {
           return `<label class="full-span">${esc(f.label)}<textarea id="${id}" data-key="${esc(f.key)}" data-type="json" class="code-editor sm" spellcheck="false">${esc(f.value)}</textarea></label>`;
         }
         const stepAttr = f.step ? `step="${esc(f.step)}"` : "";
-        return `<label>${esc(f.label)}<input id="${id}" data-key="${esc(f.key)}" data-type="${esc(f.type)}" type="${esc(f.type)}" ${stepAttr} value="${esc(f.value)}"/></label>`;
+        const roAttr = f.read_only ? `readonly aria-readonly="true" class="readonly-input"` : "";
+        return `<label>${esc(f.label)}<input id="${id}" data-key="${esc(f.key)}" data-type="${esc(f.type)}" type="${esc(f.type)}" ${stepAttr} ${roAttr} value="${esc(f.value)}"/></label>`;
       })
       .join("");
-    container.innerHTML = `<div class="form-grid">${html}</div>`;
+    container.innerHTML = `${noteHtml}<div class="form-grid">${html}</div>`;
 
     container.querySelectorAll(".add-debt-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -194,6 +196,47 @@ window.FinanceModules = (function () {
     `;
   }
 
+  function priorityTone(prio) {
+    const p = String(prio || "Med").toLowerCase();
+    if (p.includes("high") || p.includes("crit")) return { cls: "high", label: "High" };
+    if (p.includes("low")) return { cls: "low", label: "Low" };
+    return { cls: "med", label: "Med" };
+  }
+
+  function renderActionItems(items, heading = "Top Prioritized Action Items") {
+    const list = Array.isArray(items) ? items : [];
+    if (!list.length) return "";
+    const rows = list
+      .map((a) => {
+        const tone = priorityTone(a.priority);
+        const cat = a.category ? `<span class="action-tag">${esc(a.category)}</span>` : "";
+        const imp = a.impact ? `<span class="action-impact">Impact: ${esc(a.impact)}</span>` : "";
+        return `
+          <div class="action-item prio-${tone.cls}">
+            <span class="prio-badge prio-${tone.cls}">${tone.label}</span>
+            <div class="action-body">
+              <div class="action-text">${esc(a.action || "")}</div>
+              <div class="action-meta">${cat}${imp}</div>
+            </div>
+          </div>`;
+      })
+      .join("");
+
+    return `
+      <div class="actions-section">
+        <div class="actions-header">
+          <h4>${esc(heading)}</h4>
+          <div class="prio-legend" aria-label="Priority color legend">
+            <span class="legend-chip"><span class="legend-dot high"></span>High = Urgent</span>
+            <span class="legend-chip"><span class="legend-dot med"></span>Med = 30–90 days</span>
+            <span class="legend-chip"><span class="legend-dot low"></span>Low = Quick win</span>
+          </div>
+        </div>
+        <div class="action-list">${rows}</div>
+      </div>
+    `;
+  }
+
   function renderResult(container, result) {
     if (!result) {
       container.innerHTML = `<p class="muted">Run this calculator to view metrics, charts, tables, and recommendations.</p>`;
@@ -232,8 +275,10 @@ window.FinanceModules = (function () {
       })
       .join("");
 
+    const actionsHtml = renderActionItems(result.action_items);
+
     const recsHtml = (result.recommendations || []).length
-      ? `<div class="recs-block"><h4>Recommended Actions</h4><ul>${result.recommendations.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></div>`
+      ? `<div class="recs-block"><h4>Key Takeaways</h4><ul>${result.recommendations.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></div>`
       : "";
 
     container.innerHTML = `
@@ -242,9 +287,10 @@ window.FinanceModules = (function () {
       ${mcHtml}
       ${chartHtml}
       ${tablesHtml}
+      ${actionsHtml}
       ${recsHtml}
     `;
   }
 
-  return { getFields, renderForm, readForm, renderResult };
+  return { getFields, renderForm, readForm, renderResult, renderActionItems };
 })();

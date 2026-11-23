@@ -54,7 +54,7 @@ class TestStructuredSpecs(unittest.TestCase):
                 self.assertIn("description", mod)
                 self.assertIn("fields", mod)
                 self.assertIn(mod.get("engine"), ("deterministic", "hybrid_monte_carlo"))
-        self.assertEqual(total_modules, 14)
+        self.assertEqual(total_modules, 13)
 
         # Ensure legacy SKILL.md artifacts are completely removed
         self.assertFalse((REPO_ROOT / "skills").exists())
@@ -257,12 +257,12 @@ class TestLocalhostServerE2E(unittest.TestCase):
                 self.assertNotIn("SQLite", app_js)
                 self.assertNotIn(".md", app_js)
 
-                # 2. /api/modules returns all 14 modules across 5 stages
+                # 2. /api/modules returns all 13 modules across 5 stages
                 with urllib.request.urlopen(f"{base}/api/modules") as resp:
                     self.assertEqual(resp.status, 200)
                     catalog = json.loads(resp.read().decode("utf-8"))
                     self.assertEqual(len(catalog["stages"]), 5)
-                    self.assertEqual(catalog["total_modules"], 14)
+                    self.assertEqual(catalog["total_modules"], 13)
 
                 # 3. User registration works & duplicate returns 409
                 reg_req = urllib.request.Request(
@@ -379,7 +379,7 @@ class TestLocalhostServerE2E(unittest.TestCase):
 
                 with urllib.request.urlopen(urllib.request.Request(f"{base}/api/plans/{plan_id}/modules", headers=auth_headers)) as resp:
                     runs_body = json.loads(resp.read().decode("utf-8"))
-                    self.assertEqual(len(runs_body["completed_modules"]), 14)
+                    self.assertEqual(len(runs_body["completed_modules"]), 13)
 
                 with urllib.request.urlopen(urllib.request.Request(f"{base}/api/plans/{plan_id}/pdf", headers=auth_headers)) as resp:
                     self.assertEqual(resp.status, 200)

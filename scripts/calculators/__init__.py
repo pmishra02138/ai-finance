@@ -23,7 +23,7 @@ from .baseline import calc_networth, calc_quick
 from .foundation import _simulate_debt_payoff, calc_budget, calc_debt, calc_emergency, calc_protection
 from .growth import SCREEN_STRATEGIES, calc_portfolio, calc_taxes
 from .horizons import calc_compare, calc_fire, calc_goals, calc_retirement
-from .synthesis import calc_analyze, calc_report_pdf
+from .synthesis import calc_analyze
 
 CALCULATORS: Dict[str, Callable[[Dict[str, Any], Dict[str, Any]], Dict[str, Any]]] = {
     "finance-quick": calc_quick,
@@ -39,7 +39,6 @@ CALCULATORS: Dict[str, Callable[[Dict[str, Any], Dict[str, Any]], Dict[str, Any]
     "finance-goals": calc_goals,
     "finance-compare": calc_compare,
     "finance-analyze": calc_analyze,
-    "finance-report-pdf": calc_report_pdf,
 }
 
 
@@ -68,5 +67,4 @@ __all__ = [
     "calc_goals",
     "calc_compare",
     "calc_analyze",
-    "calc_report_pdf",
 ]

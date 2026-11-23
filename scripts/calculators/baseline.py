@@ -117,7 +117,16 @@ def calc_networth(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any
     total_assets = cash + investments + real_estate + other_assets
     total_liabilities = mortgage + other_debt
     net_worth = total_assets - total_liabilities
-    expected_mnd = (age * annual_income) / 10.0 if age > 0 else 0.0
+    if age <= 0:
+        expected_mnd = 0.0
+        bench_label = "MND Benchmark (Gross)"
+    elif age < 35:
+        # Early-career ramp (~0.6x salary at 26, ~1.2x at 30) since Stanley-Danko (Age*Income/10) over-penalizes <35
+        expected_mnd = annual_income * max(0.25, (age - 22) * 0.15)
+        bench_label = "Early-Career Benchmark"
+    else:
+        expected_mnd = (age * annual_income) / 10.0
+        bench_label = "MND Benchmark (Gross)"
     mnd_ratio = (net_worth / expected_mnd) if expected_mnd > 0 else 1.0
 
     milestones = [100_000, 250_000, 500_000, 1_000_000, 5_000_000, 10_000_000]
@@ -141,7 +150,7 @@ def calc_networth(inputs: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any
             {"label": "Total Assets", "value": _money(total_assets), "tone": "good"},
             {"label": "Total Liabilities", "value": _money(total_liabilities), "tone": "warn" if total_liabilities > 0 else "good"},
             {"label": "Net Worth", "value": _money(net_worth), "tone": "good" if net_worth >= 0 else "bad"},
-            {"label": "MND Benchmark (Gross)", "value": _money(expected_mnd), "tone": "neutral"},
+            {"label": bench_label, "value": _money(expected_mnd), "tone": "neutral"},
             {"label": "Next Milestone", "value": _money(next_ms), "tone": "neutral"},
         ],
         "tables": [
